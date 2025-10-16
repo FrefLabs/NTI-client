@@ -1,0 +1,16 @@
+Previous Close=69.06
+Open=68.66
+Bid=68.72 x 110
+Ask=68.73 x 600
+Day's Range=68.18 - 69.10
+52 Week Range=60.62 - 74.38
+Volume=6019642
+Avg. Volume=15311440
+Market Cap (intraday)=294.349B
+Beta (5Y Monthly)=0.44
+PE Ratio (TTM)=24.25
+EPS (TTM)=2.82
+Earnings Date=Oct 21, 2025
+Forward Dividend=2.04
+Ex-Dividend Date=Sep 15, 2025
+1y Target Est=78.70
