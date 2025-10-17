@@ -22,6 +22,14 @@ public class Prototipo extends JFrame {
     // Archivo de datos
     private static final String ARCHIVO_DATOS = "datos.txt";
     Color bordeDorado = Color.decode("#D4AF37");
+    Color fondo = Color.decode("#030614");
+    Color fondoPanel = Color.decode("#060521");
+    Color letra = Color.white;
+    
+    String bordedoradoStr = "rgb(" + bordeDorado.getRed() + "," + bordeDorado.getGreen() + "," + bordeDorado.getBlue() + ")";
+    String letraStr = "rgb(" + letra.getRed() + "," + letra.getGreen() + "," + letra.getBlue() + ")";
+
+    
     Empresa emp = new Empresa();
     Noticia not = new Noticia();
 
@@ -31,7 +39,7 @@ public class Prototipo extends JFrame {
         setSize(1298, 763);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
-        getContentPane().setBackground(Color.decode("#030614")); // fondo general
+        getContentPane().setBackground(fondo); // fondo general
 
         // -------------------------------    
         // SIDEBAR - TODAS LAS PAGINAS 
@@ -108,13 +116,13 @@ public class Prototipo extends JFrame {
         // ------------------------------ PANEL CENTRAL ------------------------------------
         JPanel centro = new JPanel(new BorderLayout(10, 10));
         centro.setPreferredSize(new Dimension(300, getHeight()));
-        centro.setBackground(Color.decode("#030614"));
+        centro.setBackground(fondo);
         centro.setBorder(new EmptyBorder(30, 20, 30, 0));
 
         // Barra superior en centro
         JPanel bar = new JPanel(new BorderLayout(10, 10));
         bar.setBorder(new RoundedBorder(20, bordeDorado, 3));
-        bar.setBackground(Color.decode("#030614"));
+        bar.setBackground(fondo);
         bar.setPreferredSize(new Dimension(300, 40));
         centro.add(bar, BorderLayout.NORTH);
 
@@ -137,12 +145,12 @@ public class Prototipo extends JFrame {
         JPanel derecha = new JPanel();
         derecha.setLayout(new BoxLayout(derecha, BoxLayout.Y_AXIS));
         derecha.setPreferredSize(new Dimension(450, getHeight()));
-        derecha.setBackground(Color.decode("#030614"));
+        derecha.setBackground(fondo);
         derecha.setBorder(new EmptyBorder(30, 20, 30, 20));
 
         // --- Recomendacion - Panel de Valores IMPORTANTE
         JPanel recomendacion = new JPanel();
-        recomendacion.setBackground(Color.decode("#060521"));
+        recomendacion.setBackground(fondoPanel);
         recomendacion.setBorder(new RoundedBorder(20, bordeDorado, 3));
         recomendacion.setPreferredSize(new Dimension(450, 180));
         recomendacion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
@@ -151,7 +159,7 @@ public class Prototipo extends JFrame {
         derecha.add(Box.createVerticalStrut(20));
 
         JPanel descripcion = new JPanel();
-        descripcion.setBackground(Color.decode("#060521"));
+        descripcion.setBackground(fondoPanel);
         descripcion.setBorder(BorderFactory.createCompoundBorder(
                 new RoundedBorder(20, bordeDorado, 3),
                 new EmptyBorder(10, 10, 10, 10)
@@ -166,10 +174,14 @@ public class Prototipo extends JFrame {
 
         for (Empresa e : empresas) {
             // Creamos un JLabel con HTML para diferenciar colores
-            JLabel label = new JLabel("<html><span style='color:rgb("
-                    + bordeDorado.getRed() + "," + bordeDorado.getGreen() + "," + bordeDorado.getBlue()
-                    + "); font-weight:bold;'>" + e.getNombreEmpresa() + "</span> "
-                    + "<span style='color:white;'>" + e.getDescripcion() + "</span></html>");
+            JLabel label = new JLabel("<html>"
+            + "<span style='color:" + bordedoradoStr + "; font-weight:bold;'>"
+            + e.getNombreEmpresa()
+            + "</span> "
+            + "<span style='color:" + letraStr + ";'>"
+            + e.getDescripcion()
+            + "</span>"
+            + "</html>");
 
             label.setForeground(Color.WHITE);
             descripcion.add(label);
@@ -181,7 +193,7 @@ public class Prototipo extends JFrame {
 
         // --- ListaValores
         JPanel listaValores = new JPanel();
-        listaValores.setBackground(Color.decode("#060521"));
+        listaValores.setBackground(fondoPanel);
         listaValores.setBorder(new RoundedBorder(20, bordeDorado, 3));
         listaValores.setPreferredSize(new Dimension(450, 260));
         listaValores.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
@@ -192,7 +204,7 @@ public class Prototipo extends JFrame {
         // --- Noticias
         JPanel noticias = new JPanel();
         noticias.setLayout(new BoxLayout(noticias, BoxLayout.Y_AXIS));
-        noticias.setBackground(Color.decode("#060521"));
+        noticias.setBackground(fondoPanel);
 
         // Borde dorado con margen interno de 10px
         noticias.setBorder(BorderFactory.createCompoundBorder(
@@ -217,7 +229,7 @@ public class Prototipo extends JFrame {
             // Panel individual para cada noticia con layout horizontal
             JPanel panelNoticia = new JPanel();
             panelNoticia.setLayout(new BoxLayout(panelNoticia, BoxLayout.X_AXIS));
-            panelNoticia.setBackground(Color.decode("#060521"));
+            panelNoticia.setBackground(fondoPanel);
             panelNoticia.setBorder(new EmptyBorder(5, 10, 5, 10)); // márgenes
 
             // Seleccionar imagen según la noticia
@@ -229,7 +241,7 @@ public class Prototipo extends JFrame {
             // Panel para texto (vertical)
             JPanel textoPanel = new JPanel();
             textoPanel.setLayout(new BoxLayout(textoPanel, BoxLayout.Y_AXIS));
-            textoPanel.setBackground(Color.decode("#060521"));
+            textoPanel.setBackground(fondoPanel);
 
             JLabel title = new JLabel(noticia[1]);
             title.setForeground(Color.WHITE);
@@ -237,7 +249,7 @@ public class Prototipo extends JFrame {
             //! CAMBIAR FONT, NO ESTA BIEN OCNFIG, CAMBIAR A TEXT AREa.
             
             JLabel fuente = new JLabel("📎 " + noticia[0]);
-            fuente.setForeground(Color.decode("#FFD700")); // amarillo
+            fuente.setForeground(bordeDorado); // amarillo
 
             JLabel link = new JLabel(noticia[2]);
             link.setForeground(Color.CYAN); // opcional
@@ -268,7 +280,7 @@ public class Prototipo extends JFrame {
         // Panel principal que ocupa el espacio del centro y derecha
         JPanel panelModelos = new JPanel();
         panelModelos.setLayout(new BorderLayout(20, 20));
-        panelModelos.setBackground(Color.decode("#030614"));
+        panelModelos.setBackground(fondo);
         panelModelos.setBorder(new EmptyBorder(30, 20, 30, 20));
         panelModelos.setVisible(false); // oculto por defecto
         add(panelModelos, BorderLayout.CENTER); // ocupa el mismo lugar que los otros
@@ -277,7 +289,7 @@ public class Prototipo extends JFrame {
         // PANEL SUPERIOR - BARRA DE BUSQUEDA
         //--------------------------------
         JPanel barraSuperior = new JPanel(new BorderLayout(10, 10));
-        barraSuperior.setBackground(Color.decode("#060521"));
+        barraSuperior.setBackground(fondoPanel);
         barraSuperior.setBorder(new RoundedBorder(20, bordeDorado, 3));
         barraSuperior.setPreferredSize(new Dimension(300, 45));
 
@@ -296,11 +308,11 @@ public class Prototipo extends JFrame {
         //--------------------------------
         JPanel contenidoModelos = new JPanel();
         contenidoModelos.setLayout(new BoxLayout(contenidoModelos, BoxLayout.Y_AXIS));
-        contenidoModelos.setBackground(Color.decode("#030614"));
+        contenidoModelos.setBackground(fondo);
         contenidoModelos.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // TÍTULO “MODELOS INSTALADOS”
-        JLabel lblTituloModelos = new JLabel("<html><span style='color:white;'>Modelos</span> <span style='color:#D4AF37;'>instalados</span></html>");
+        JLabel lblTituloModelos = new JLabel("<html><span style='color:" + letraStr +";'>Modelos</span> <span style='color:" + bordedoradoStr + ";'>instalados</span></html>");
         lblTituloModelos.setFont(Fuentes.getBlack(24f));
         lblTituloModelos.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblTituloModelos.setBorder(new EmptyBorder(0, 5, 15, 0));
@@ -308,7 +320,7 @@ public class Prototipo extends JFrame {
 
         // PANEL INDIVIDUAL - MODELO KO
         JPanel panelKO = new JPanel();
-        panelKO.setBackground(Color.decode("#060521"));
+        panelKO.setBackground(fondoPanel);
         panelKO.setLayout(new BorderLayout(10, 10));
         panelKO.setBorder(BorderFactory.createCompoundBorder(
                 new RoundedBorder(20, bordeDorado, 3),
@@ -341,9 +353,9 @@ public class Prototipo extends JFrame {
 // Botón "Seleccionado"
         JButton btnSeleccionado = new JButton("        Seleccionado        ");
         btnSeleccionado.setBackground(Color.decode("#1E2A5A"));
-        btnSeleccionado.setForeground(Color.WHITE);
+        btnSeleccionado.setForeground(letra);
         btnSeleccionado.setFont(Fuentes.getBold(14f));
-        btnSeleccionado.setBorder(new RoundedBorder(15, Color.WHITE, 1));
+        btnSeleccionado.setBorder(new RoundedBorder(15, letra, 1));
         btnSeleccionado.setFocusPainted(false);
         panelSuperiorKO.add(btnSeleccionado, BorderLayout.EAST);
 
@@ -355,7 +367,7 @@ public class Prototipo extends JFrame {
         panelInferiorKO.setOpaque(false);
         panelInferiorKO.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        JLabel lblPrecision = new JLabel("<html><span style='color:white;'>Precision: </span> <span style='color:rgb(0,255,0);'>92.26%</span></html>");
+        JLabel lblPrecision = new JLabel("<html><span style='color:" + letra + ";'>Precision: </span> <span style='color:rgb(0,255,0);'>92.26%</span></html>");
         lblPrecision.setFont(Fuentes.getBold(16f));
         panelInferiorKO.add(lblPrecision);
 
@@ -444,7 +456,7 @@ public class Prototipo extends JFrame {
         );
 
         XYPlot plot = chart.getXYPlot();
-        plot.setBackgroundPaint(Color.decode("#030614"));
+        plot.setBackgroundPaint(fondo);
         plot.setDomainGridlinePaint(new Color(60, 60, 60));
         plot.setRangeGridlinePaint(new Color(60, 60, 60));
 
@@ -463,17 +475,17 @@ public class Prototipo extends JFrame {
         plot.setRenderer(renderer);
 
         // Estilo de ejes
-        plot.getDomainAxis().setTickLabelPaint(Color.WHITE);
-        plot.getRangeAxis().setTickLabelPaint(Color.WHITE);
-        plot.getDomainAxis().setLabelPaint(Color.WHITE);
-        plot.getRangeAxis().setLabelPaint(Color.WHITE);
+        plot.getDomainAxis().setTickLabelPaint(letra);
+        plot.getRangeAxis().setTickLabelPaint(letra);
+        plot.getDomainAxis().setLabelPaint(letra);
+        plot.getRangeAxis().setLabelPaint(letra);
 
         chart.setBackgroundPaint(Color.decode("#030614"));
 
         ChartPanel chartPanel = new ChartPanel(chart);
 
         // Fondo opaco y del mismo color que el resto de la UI
-        chartPanel.setBackground(Color.decode("#030614"));
+        chartPanel.setBackground(fondo);
         chartPanel.setOpaque(true);
 
         // Eliminar bordes internos que puedan interferir
@@ -527,7 +539,7 @@ public class Prototipo extends JFrame {
     private JPanel crearPanelDatos() {
         JPanel datosPanel = new JPanel();
         datosPanel.setBorder(new RoundedBorder(20, bordeDorado, 3));
-        datosPanel.setBackground(Color.decode("#060521"));
+        datosPanel.setBackground(fondoPanel);
         datosPanel.setPreferredSize(new Dimension(600, 180));
         datosPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         datosPanel.setLayout(new GridLayout(8, 2, 15, 5)); // 2 filas, 4 columnas

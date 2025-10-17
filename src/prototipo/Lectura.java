@@ -14,23 +14,24 @@ public class Lectura {
         Vector<Empresa> empresas = new Vector<>();
 
         // Llamado al Stored Procedure
-        String storedProc = "{CALL ObtenerDatosEmpresa()}";
+        String storedProc = "{CALL ObtenerDatosEmpresaSimbolo(?)}";
 
         Connection conn = null;
         CallableStatement stmt = null;
         ResultSet rs = null;
 
         try {
-            // Carga de Driver
+            // Cargar Driver
             Class.forName("org.mariadb.jdbc.Driver");
 
             // Conectar con BD
             conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
 
-            // Procedure
+            // Preparar llamado al procedimiento
             stmt = conn.prepareCall(storedProc);
+            stmt.setString(1, "KO"); 
 
-            // exec
+            // Ejecutar
             rs = stmt.executeQuery();
 
             while (rs.next()) {
@@ -48,10 +49,25 @@ public class Lectura {
             System.err.println("Error al obtener datos de la empresa: " + e.getMessage());
             e.printStackTrace();
         } finally {
-            // Cerrar
-            try { if (rs != null) rs.close(); } catch (SQLException ignored) {}
-            try { if (stmt != null) stmt.close(); } catch (SQLException ignored) {}
-            try { if (conn != null) conn.close(); } catch (SQLException ignored) {}
+            // Cerrar recursos
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (SQLException ignored) {
+            }
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+            } catch (SQLException ignored) {
+            }
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ignored) {
+            }
         }
 
         return empresas;
