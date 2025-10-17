@@ -16,6 +16,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Vector;
 import java.sql.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import javafx.beans.value.ChangeListener;
+import javax.swing.event.ChangeEvent;
 
 public class Prototipo extends JFrame {
 
@@ -379,6 +383,134 @@ public class Prototipo extends JFrame {
 // Agregar el contenido al panel principal
         panelModelos.add(contenidoModelos, BorderLayout.CENTER);
         
+// ---------------------------------------------------
+// PANELES PARA LA PAGINA AJUSTES
+// ---------------------------------------------------
+        JPanel panelAjustes = new JPanel();
+        panelAjustes.setLayout(new BoxLayout(panelAjustes, BoxLayout.Y_AXIS));
+        panelAjustes.setBackground(fondo);
+        panelAjustes.setBorder(new EmptyBorder(30, 20, 30, 20));
+        panelAjustes.setVisible(false);
+        add(panelAjustes, BorderLayout.CENTER);
+
+        // LABEL TITULO AJUSTES
+        JLabel lblAjustes = new JLabel("Ajustes");
+        lblAjustes.setForeground(bordeDorado);
+        lblAjustes.setFont(Fuentes.getBlack(26f));
+        lblAjustes.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblAjustes.setBorder(new EmptyBorder(0, 0, 20, 0));
+        panelAjustes.add(lblAjustes);
+
+        // -------------------- Método auxiliar para paneles --------------------
+        BiFunction<String[], JComponent, JPanel> crearPanelAjuste = (textos, componente) -> {
+            JPanel panel = new JPanel(new GridBagLayout());
+            panel.setBackground(fondoPanel);
+            panel.setBorder(BorderFactory.createCompoundBorder(
+                    new RoundedBorder(15, bordeDorado, 2),
+                    new EmptyBorder(10, 10, 10, 10)
+            ));
+            panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(0, 0, 0, 20); // margen derecho 20px
+            gbc.fill = GridBagConstraints.NONE;
+            gbc.weightx = 1.0;
+            gbc.weighty = 1.0;
+
+            // JLabel con título grande y subtítulo pequeño
+            JLabel lbl = new JLabel("<html><span style='font-size:16px; font-weight:bold;'>" + textos[0] + "</span><br><span style='font-size:10px;'>" + textos[1] + "</span></html>");
+            lbl.setForeground(letra);
+
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.WEST;
+            gbc.weightx = 0.9;
+            panel.add(lbl, gbc);
+
+            // Componente a la derecha
+            gbc.gridx = 1;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.EAST;
+            gbc.weightx = 0.1;
+            panel.add(componente, gbc);
+
+            return panel;
+        };
+
+        // -------------------- Método auxiliar para togglesbtn --------------------
+        Consumer<JToggleButton> estilizarToggle = toggle -> {
+            toggle.setFocusPainted(false);
+            toggle.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            toggle.setOpaque(true);
+            toggle.setContentAreaFilled(true);
+            toggle.addChangeListener(e -> {
+                if (toggle.isSelected()) {
+                    toggle.setBackground(Color.BLACK);
+                    toggle.setForeground(Color.WHITE);
+                } else {
+                    toggle.setBackground(Color.WHITE);
+                    toggle.setForeground(Color.BLACK);
+                }
+            });
+            // disparar el cambio inicial
+            for (javax.swing.event.ChangeListener cl : toggle.getChangeListeners()) {
+                cl.stateChanged(new ChangeEvent(toggle));
+            }
+        };
+
+        // -------------------- MONEDA --------------------
+        String[] textosMoneda = {"Moneda", "Seleccione la divisa con la que desea que se muestre el sistema."};
+        JComboBox<String> cbMoneda = new JComboBox<>(new String[]{"US Dolar (USD)", "Euro (EUR)", "Peso Argentino (ARS)"});
+        cbMoneda.setBackground(Color.BLACK);
+        cbMoneda.setForeground(Color.WHITE);
+        cbMoneda.setPreferredSize(new Dimension(180, 30));
+        JPanel panelMoneda = crearPanelAjuste.apply(textosMoneda, cbMoneda);
+        panelAjustes.add(panelMoneda);
+        panelAjustes.add(Box.createVerticalStrut(15));
+
+        // -------------------- IDIOMA --------------------
+        String[] textosIdioma = {"Idioma", "Seleccione el idioma con el que desea que se muestre el sistema."};
+        JComboBox<String> cbIdioma = new JComboBox<>(new String[]{"Español (ES)", "English (EN)"});
+        cbIdioma.setBackground(Color.BLACK);
+        cbIdioma.setForeground(Color.WHITE);
+        cbIdioma.setPreferredSize(new Dimension(180, 30));
+        JPanel panelIdioma = crearPanelAjuste.apply(textosIdioma, cbIdioma);
+        panelAjustes.add(panelIdioma);
+        panelAjustes.add(Box.createVerticalStrut(15));
+
+        // -------------------- EFECTOS DE SONIDO --------------------
+        String[] textosSonido = {"Efectos de sonido", "Desactive esta opción para deshabilitar los efectos de sonido."};
+        JToggleButton toggleSonido = new JToggleButton();
+        toggleSonido.setSelected(true);
+        toggleSonido.setPreferredSize(new Dimension(60, 25));
+        estilizarToggle.accept(toggleSonido);
+        JPanel panelSonido = crearPanelAjuste.apply(textosSonido, toggleSonido);
+        panelAjustes.add(panelSonido);
+        panelAjustes.add(Box.createVerticalStrut(15));
+
+        // -------------------- MODO OSCURO --------------------
+        String[] textosOscuro = {"Modo oscuro", "Desactive esta opción para deshabilitar el modo claro."};
+        JToggleButton toggleOscuro = new JToggleButton();
+        toggleOscuro.setSelected(true);
+        toggleOscuro.setPreferredSize(new Dimension(60, 25));
+        estilizarToggle.accept(toggleOscuro);
+        JPanel panelOscuro = crearPanelAjuste.apply(textosOscuro, toggleOscuro);
+        panelAjustes.add(panelOscuro);
+        panelAjustes.add(Box.createVerticalStrut(15));
+
+        // -------------------- RED DE REFINAMIENTO --------------------
+        String[] textosRed = {"Red de refinamiento", "Desactive esta opción para deshabilitar la red neuronal que refina el resultado."};
+        JToggleButton toggleRed = new JToggleButton();
+        toggleRed.setSelected(true);
+        toggleRed.setPreferredSize(new Dimension(60, 25));
+        estilizarToggle.accept(toggleRed);
+        JPanel panelRed = crearPanelAjuste.apply(textosRed, toggleRed);
+        panelAjustes.add(panelRed);
+
+        // Ocupa todo el espacio vertical sobrante
+        panelAjustes.add(Box.createVerticalGlue());
+
+
 // ------------------------------
 // Funcionalidades de Botones
 // ------------------------------        
@@ -387,6 +519,7 @@ public class Prototipo extends JFrame {
             centro.setVisible(true);
             derecha.setVisible(true);
             panelModelos.setVisible(false);
+            panelAjustes.setVisible(false);
         });
 
         btnModelos.addActionListener(e -> {
@@ -394,24 +527,28 @@ public class Prototipo extends JFrame {
             centro.setVisible(false);
             derecha.setVisible(false);
             panelModelos.setVisible(true);
+            panelAjustes.setVisible(false);
         });
         
         btnHistorial.addActionListener(e -> {
             centro.setVisible(false);
             derecha.setVisible(false);
             panelModelos.setVisible(false);
+            panelAjustes.setVisible(false);
         });
 
         btnJuego.addActionListener(e -> {
             centro.setVisible(false);
             derecha.setVisible(false);
             panelModelos.setVisible(false);
+            panelAjustes.setVisible(false);
         });
 
         btnAjustes.addActionListener(e -> {
             centro.setVisible(false);
             derecha.setVisible(false);
             panelModelos.setVisible(false);
+            panelAjustes.setVisible(true);
         });
     }
 
