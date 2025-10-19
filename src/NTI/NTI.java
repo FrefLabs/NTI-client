@@ -1,4 +1,4 @@
-package prototipo;
+package NTI;
 
 import org.jfree.chart.*;
 import org.jfree.chart.plot.*;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
-public class Prototipo extends JFrame {
+public class NTI extends JFrame {
     
     // Contenedor principal para las páginas
     
@@ -40,7 +40,7 @@ public class Prototipo extends JFrame {
     Empresa emp = new Empresa();
     Noticia not = new Noticia();
 
-    public Prototipo() {
+    public NTI() {
         setTitle("NeuroFref Trading Intelligence - 1.0");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1298, 763);
@@ -88,10 +88,10 @@ public class Prototipo extends JFrame {
         panelCentral.setLayout(new BoxLayout(panelCentral, BoxLayout.Y_AXIS));
         panelCentral.setBorder(new EmptyBorder(5, 20, 20, 20));
 
-        JButton btnInicio = crearBoton("Inicio");
-        JButton btnModelos = crearBoton("Modelos");
-        JButton btnHistorial = crearBoton("Historial");
-        JButton btnJuego = crearBoton("Juego");
+        JButton btnInicio = crearBoton("/img/boton_inicio.png");
+        JButton btnModelos = crearBoton("/img/boton_modelos.png");
+        JButton btnHistorial = crearBoton("/img/boton_historial.png");
+        JButton btnJuego = crearBoton("/img/boton_juego.png");
 
         JButton[] botones = {btnInicio, btnModelos, btnHistorial, btnJuego};
 
@@ -109,7 +109,7 @@ public class Prototipo extends JFrame {
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         panelInferior.setBorder(new EmptyBorder(10, 20, 20, 20));
 
-        JButton btnAjustes = crearBoton("Ajustes");
+        JButton btnAjustes = crearBoton("/img/boton_ajustes.png");
         panelInferior.add(btnAjustes);
 
         // Añadir secciones al sidebar
@@ -289,22 +289,29 @@ public class Prototipo extends JFrame {
         panelModelos.setVisible(false); // oculto por defecto
 
         //--------------------------------
-        // PANEL SUPERIOR - BARRA DE BUSQUEDA
+        // PANEL SUPERIOR - BARRA DE BÚSQUEDA
         //--------------------------------
-        JPanel barraSuperior = new JPanel(new BorderLayout(10, 10));
+        JPanel barraSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT));
         barraSuperior.setBackground(fondoPanel);
         barraSuperior.setBorder(new RoundedBorder(20, bordeDorado, 3));
-        barraSuperior.setPreferredSize(new Dimension(300, 45));
+        barraSuperior.setPreferredSize(new Dimension(600, 40));
 
-        // Campo de texto (aún sin funcionalidad)
+        // Campo de texto
         JTextField txtBuscarModelo = new JTextField("Buscar modelo...");
-        txtBuscarModelo.setBackground(Color.decode("#060521"));
+        txtBuscarModelo.setBackground(fondoPanel);
         txtBuscarModelo.setForeground(Color.LIGHT_GRAY);
         txtBuscarModelo.setCaretColor(Color.WHITE);
-        txtBuscarModelo.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        txtBuscarModelo.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(15, bordeDorado, 2), // Borde redondeado con grosor 2
+            BorderFactory.createEmptyBorder(5, 10, 5, 10) // Margen interno
+        ));
+
+        // Añadir el campo de texto a la barra superior
         barraSuperior.add(txtBuscarModelo, BorderLayout.CENTER);
 
+        // Añadir la barra superior al panel de modelos
         panelModelos.add(barraSuperior, BorderLayout.NORTH);
+
 
         //--------------------------------
         // PANEL CENTRAL CON MODELOS INSTALADOS
@@ -547,18 +554,56 @@ public class Prototipo extends JFrame {
         btnAjustes.addActionListener(e -> cardLayout.show(contentPanel, "ajustes"));
     }
 
-    // Método para crear botones uniformes de 200 x 82
-    private JButton crearBoton(String texto) {
-        JButton boton = new JButton(texto);
-        boton.setPreferredSize(new Dimension(180, 45)); // Tamaño fijo
-        boton.setMaximumSize(new Dimension(180, 45));   // Evita que se estire
-        boton.setMinimumSize(new Dimension(180, 45));   // Evita que se encoja
+    // Crear botones de la sidebar
+    private JButton crearBoton(String rutaImagen) {
+        JButton boton = new JButton();
+        boton.setPreferredSize(new Dimension(174, 46));
+        boton.setMaximumSize(new Dimension(174, 46));
+        boton.setMinimumSize(new Dimension(174, 46));
         boton.setBackground(new Color(20, 20, 20));
-        boton.setForeground(Color.WHITE);
         boton.setFocusPainted(false);
-        boton.setFont(new Font("Arial", Font.PLAIN, 16));
+        boton.setBorder(new TransparentRoundedBorder(15)); // Borde redondeado sin color
+
+        // Cargar la imagen directamente sin escalar
+        ImageIcon icono = new ImageIcon(getClass().getResource(rutaImagen));
+        boton.setIcon(icono);
+
+        // Configurar el botón para que no muestre texto
+        boton.setText("");
+        boton.setContentAreaFilled(false);
+        boton.setOpaque(false);
+
         return boton;
     }
+
+
+    private static class TransparentRoundedBorder implements Border {
+        private int radius;
+
+        public TransparentRoundedBorder(int radius) {
+            this.radius = radius;
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(0, 0, 0, 0); // Sin márgenes internos
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            // Dibujar un borde redondeado sin color visible
+            g2.setColor(c.getBackground()); // Usar el color de fondo del botón
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+        }
+    }
+
 
     /**
      * Crea un gráfico donde cada segmento de la línea
@@ -769,7 +814,7 @@ public class Prototipo extends JFrame {
             }
 
             // Iniciar la aplicación
-            new Prototipo();
+            new NTI();
         });
     }
 }

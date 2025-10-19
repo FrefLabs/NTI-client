@@ -1,4 +1,4 @@
-package prototipo;
+package NTI;
 
 import java.awt.Font;
 import java.io.InputStream;

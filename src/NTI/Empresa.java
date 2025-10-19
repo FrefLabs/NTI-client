@@ -1,4 +1,4 @@
-package prototipo;
+package NTI;
 
 import java.util.Vector;
 
