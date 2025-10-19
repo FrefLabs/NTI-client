@@ -22,6 +22,9 @@ import javafx.beans.value.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
 public class Prototipo extends JFrame {
+    
+    // Contenedor principal para las páginas
+    
 
     // Archivo de datos
     private static final String ARCHIVO_DATOS = "datos.txt";
@@ -44,6 +47,9 @@ public class Prototipo extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(fondo); // fondo general
+        
+        JPanel contentPanel = new JPanel(new CardLayout());
+        add(contentPanel, BorderLayout.CENTER);
 
         // -------------------------------    
         // SIDEBAR - TODAS LAS PAGINAS 
@@ -113,10 +119,13 @@ public class Prototipo extends JFrame {
 
         add(sidebar, BorderLayout.WEST);
 
-        //--------------------------------
-        //PANELES PARA LA PAGINA DE INICIO
-        //--------------------------------
-        
+//--------------------------------
+//  PANEL INICIO COMPLETO
+//--------------------------------
+        // Panel principal que contendrá todo
+        JPanel panelInicio = new JPanel(new BorderLayout());
+        panelInicio.setBackground(fondo);
+
         // ------------------------------ PANEL CENTRAL ------------------------------------
         JPanel centro = new JPanel(new BorderLayout(10, 10));
         centro.setPreferredSize(new Dimension(300, getHeight()));
@@ -130,7 +139,7 @@ public class Prototipo extends JFrame {
         bar.setPreferredSize(new Dimension(300, 40));
         centro.add(bar, BorderLayout.NORTH);
 
-        // Gráfico dinámico de valores de accion IMPORTATNE
+        // Gráfico dinámico de valores de acción
         ChartPanel chartPanel = crearGraficoConSegmentos();
         chartPanel.setBorder(new RoundedBorder(20, bordeDorado, 3));
         centro.add(chartPanel, BorderLayout.CENTER);
@@ -138,30 +147,36 @@ public class Prototipo extends JFrame {
         // Datos en parte inferior
         JPanel datos = crearPanelDatos();
         datos.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(20, bordeDorado, 3),
-            new EmptyBorder(10, 15, 10, 15)
+                new RoundedBorder(20, bordeDorado, 3),
+                new EmptyBorder(10, 15, 10, 15)
         ));
         centro.add(datos, BorderLayout.SOUTH);
 
-        add(centro, BorderLayout.CENTER);
+        // Se agrega el panel central al panel principal
+        panelInicio.add(centro, BorderLayout.CENTER);
 
-        //  ------------------------- PANEL DERECHO --------------------------------------
+        // ------------------------- PANEL DERECHO --------------------------------------
         JPanel derecha = new JPanel();
         derecha.setLayout(new BoxLayout(derecha, BoxLayout.Y_AXIS));
         derecha.setPreferredSize(new Dimension(450, getHeight()));
         derecha.setBackground(fondo);
         derecha.setBorder(new EmptyBorder(30, 20, 30, 20));
 
-        // --- Recomendacion - Panel de Valores IMPORTANTE
+        // --- Recomendación - Panel de Valores
         JPanel recomendacion = new JPanel();
         recomendacion.setBackground(fondoPanel);
-        recomendacion.setBorder(new RoundedBorder(20, bordeDorado, 3));
+        recomendacion.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(20, bordeDorado, 3),
+                new EmptyBorder(10, 10, 10, 10)
+        ));
+        recomendacion.setLayout(new BoxLayout(recomendacion, BoxLayout.Y_AXIS));
         recomendacion.setPreferredSize(new Dimension(450, 180));
-        recomendacion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        recomendacion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
         recomendacion.setAlignmentX(Component.LEFT_ALIGNMENT);
         derecha.add(recomendacion);
         derecha.add(Box.createVerticalStrut(20));
 
+        // --- Descripción de empresas
         JPanel descripcion = new JPanel();
         descripcion.setBackground(fondoPanel);
         descripcion.setBorder(BorderFactory.createCompoundBorder(
@@ -170,79 +185,67 @@ public class Prototipo extends JFrame {
         ));
         descripcion.setLayout(new BoxLayout(descripcion, BoxLayout.Y_AXIS));
         descripcion.setPreferredSize(new Dimension(450, 130));
-        descripcion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        descripcion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
         descripcion.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Obtencion de datos de Empresa
         Vector<Empresa> empresas = emp.obtenerEmpresasDesdeBD();
-
         for (Empresa e : empresas) {
-            // Creamos un JLabel con HTML para diferenciar colores
             JLabel label = new JLabel("<html>"
-            + "<span style='color:" + bordedoradoStr + "; font-weight:bold;'>"
-            + e.getNombreEmpresa()
-            + "</span> "
-            + "<span style='color:" + letraStr + ";'>"
-            + e.getDescripcion()
-            + "</span>"
-            + "</html>");
-
+                    + "<span style='color:" + bordedoradoStr + "; font-weight:bold;'>"
+                    + e.getNombreEmpresa()
+                    + "</span> "
+                    + "<span style='color:" + letraStr + ";'>"
+                    + e.getDescripcion()
+                    + "</span>"
+                    + "</html>");
             label.setForeground(Color.WHITE);
             descripcion.add(label);
             descripcion.add(Box.createVerticalStrut(8));
         }
-
         derecha.add(descripcion);
         derecha.add(Box.createVerticalStrut(20));
 
-        // --- ListaValores
+        // --- Lista de Valores
         JPanel listaValores = new JPanel();
         listaValores.setBackground(fondoPanel);
         listaValores.setBorder(new RoundedBorder(20, bordeDorado, 3));
         listaValores.setPreferredSize(new Dimension(450, 260));
-        listaValores.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
+        listaValores.setMaximumSize(new Dimension(Integer.MAX_VALUE, 345));
         listaValores.setAlignmentX(Component.LEFT_ALIGNMENT);
         derecha.add(listaValores);
-        derecha.add(Box.createVerticalStrut(20));
+        derecha.add(Box.createVerticalStrut(15));
 
         // --- Noticias
         JPanel noticias = new JPanel();
         noticias.setLayout(new BoxLayout(noticias, BoxLayout.Y_AXIS));
         noticias.setBackground(fondoPanel);
-
-        // Borde dorado con margen interno de 10px
         noticias.setBorder(BorderFactory.createCompoundBorder(
-                new RoundedBorder(20, bordeDorado, 3), // Borde externo redondeado
-                new EmptyBorder(10, 10, 10, 10) // Margen interno: top, left, bottom, right
+                new RoundedBorder(20, bordeDorado, 3),
+                new EmptyBorder(10, 10, 10, 10)
         ));
-
         noticias.setPreferredSize(new Dimension(450, 170));
-        noticias.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
+        noticias.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
         noticias.setAlignmentX(Component.LEFT_ALIGNMENT);
         derecha.add(noticias);
 
-        // Obtener noticias desde el archivo usando tu función
+        // Obtener noticias desde el archivo
         Vector<String[]> datnot = not.obtenerDatosNoticias();
-
-        // Recorrer las noticias y mostrarlas
         for (int i = 0; i < datnot.size(); i++) {
             String[] noticia = datnot.get(i);
             if (noticia.length < 3) {
-                continue; // Ignorar líneas mal formateadas
+                continue;
             }
-            // Panel individual para cada noticia con layout horizontal
+
             JPanel panelNoticia = new JPanel();
             panelNoticia.setLayout(new BoxLayout(panelNoticia, BoxLayout.X_AXIS));
             panelNoticia.setBackground(fondoPanel);
-            panelNoticia.setBorder(new EmptyBorder(5, 10, 5, 10)); // márgenes
+            panelNoticia.setBorder(new EmptyBorder(5, 10, 5, 10));
 
-            // Seleccionar imagen según la noticia
             String rutaImagen = (i == 0) ? "/Images/Coca.png" : "/Images/CostaCofee.png";
             ImageIcon icono = new ImageIcon(getClass().getResource(rutaImagen));
             JLabel imagenLabel = new JLabel(icono);
-            imagenLabel.setBorder(new EmptyBorder(0, 0, 0, 10)); // margen entre imagen y texto
+            imagenLabel.setBorder(new EmptyBorder(0, 0, 0, 10));
 
-            // Panel para texto (vertical)
             JPanel textoPanel = new JPanel();
             textoPanel.setLayout(new BoxLayout(textoPanel, BoxLayout.Y_AXIS));
             textoPanel.setBackground(fondoPanel);
@@ -250,31 +253,28 @@ public class Prototipo extends JFrame {
             JLabel title = new JLabel(noticia[1]);
             title.setForeground(Color.WHITE);
             title.setFont(Fuentes.getBlack(14f));
-            //! CAMBIAR FONT, NO ESTA BIEN OCNFIG, CAMBIAR A TEXT AREa.
-            
-            JLabel fuente = new JLabel("📎 " + noticia[0]);
-            fuente.setForeground(bordeDorado); // amarillo
+
+            JLabel fuente = new JLabel(noticia[0]);
+            fuente.setForeground(bordeDorado);
 
             JLabel link = new JLabel(noticia[2]);
-            link.setForeground(Color.CYAN); // opcional
+            link.setForeground(Color.CYAN);
 
             textoPanel.add(title);
             textoPanel.add(Box.createVerticalStrut(5));
             textoPanel.add(fuente);
             // textoPanel.add(link); // opcional
 
-            // Agregar imagen y texto al panel de noticia
             panelNoticia.add(imagenLabel);
             panelNoticia.add(textoPanel);
 
-            // Agregar el panel de noticia al contenedor principal
             noticias.add(panelNoticia);
-
-            // Espacio entre noticias
             noticias.add(Box.createVerticalStrut(10));
         }
 
-        add(derecha, BorderLayout.EAST);
+        // Se agrega el panel derecho al panel principal
+        panelInicio.add(derecha, BorderLayout.EAST);
+        
         setVisible(true);
         
 // ---------------------------------------------------
@@ -287,7 +287,6 @@ public class Prototipo extends JFrame {
         panelModelos.setBackground(fondo);
         panelModelos.setBorder(new EmptyBorder(30, 20, 30, 20));
         panelModelos.setVisible(false); // oculto por defecto
-        add(panelModelos, BorderLayout.CENTER); // ocupa el mismo lugar que los otros
 
         //--------------------------------
         // PANEL SUPERIOR - BARRA DE BUSQUEDA
@@ -354,7 +353,7 @@ public class Prototipo extends JFrame {
 
         panelSuperiorKO.add(panelInfo, BorderLayout.WEST);
 
-// Botón "Seleccionado"
+        // Botón "Seleccionado"
         JButton btnSeleccionado = new JButton("        Seleccionado        ");
         btnSeleccionado.setBackground(Color.decode("#1E2A5A"));
         btnSeleccionado.setForeground(letra);
@@ -365,33 +364,33 @@ public class Prototipo extends JFrame {
 
         panelKO.add(panelSuperiorKO, BorderLayout.NORTH);
 
-// PANEL INFERIOR DEL MODELO KO (Precisión + Descripción)
+        // PANEL INFERIOR DEL MODELO KO (Precisión + Descripción)
         JPanel panelInferiorKO = new JPanel();
         panelInferiorKO.setLayout(new BoxLayout(panelInferiorKO, BoxLayout.Y_AXIS));
         panelInferiorKO.setOpaque(false);
         panelInferiorKO.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        JLabel lblPrecision = new JLabel("<html><span style='color:" + letra + ";'>Precision: </span> <span style='color:rgb(0,255,0);'>92.26%</span></html>");
+        JLabel lblPrecision = new JLabel("<html><span style='color:" + letraStr + ";'>Precision: </span> <span style='color:rgb(0,255,0);'>92.26%</span></html>");
         lblPrecision.setFont(Fuentes.getBold(16f));
         panelInferiorKO.add(lblPrecision);
 
         panelKO.add(panelInferiorKO, BorderLayout.CENTER);
 
-// Agregar el panel KO al contenido
+        // Agregar el panel KO al contenido
         contenidoModelos.add(panelKO);
 
-// Agregar el contenido al panel principal
+        // Agregar el contenido al panel principal
         panelModelos.add(contenidoModelos, BorderLayout.CENTER);
         
 // ---------------------------------------------------
 // PANELES PARA LA PAGINA AJUSTES
 // ---------------------------------------------------
+
         JPanel panelAjustes = new JPanel();
         panelAjustes.setLayout(new BoxLayout(panelAjustes, BoxLayout.Y_AXIS));
         panelAjustes.setBackground(fondo);
         panelAjustes.setBorder(new EmptyBorder(30, 20, 30, 20));
         panelAjustes.setVisible(false);
-        add(panelAjustes, BorderLayout.CENTER);
 
         // LABEL TITULO AJUSTES
         JLabel lblAjustes = new JLabel("Ajustes");
@@ -470,7 +469,7 @@ public class Prototipo extends JFrame {
 
         // -------------------- IDIOMA --------------------
         String[] textosIdioma = {"Idioma", "Seleccione el idioma con el que desea que se muestre el sistema."};
-        JComboBox<String> cbIdioma = new JComboBox<>(new String[]{"Español (ES)", "English (EN)"});
+        JComboBox<String> cbIdioma = new JComboBox<>(new String[]{"Español (ES)", "English (EN)", "Italiano"});
         cbIdioma.setBackground(Color.BLACK);
         cbIdioma.setForeground(Color.WHITE);
         cbIdioma.setPreferredSize(new Dimension(180, 30));
@@ -506,50 +505,46 @@ public class Prototipo extends JFrame {
         estilizarToggle.accept(toggleRed);
         JPanel panelRed = crearPanelAjuste.apply(textosRed, toggleRed);
         panelAjustes.add(panelRed);
-
-        // Ocupa todo el espacio vertical sobrante
+            
+        // Espaciador flexible antes del botón para empujar hacia abajo
         panelAjustes.add(Box.createVerticalGlue());
 
+        // Panel contenedor para el botón alineado a la derecha
+        JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        panelBoton.setOpaque(false);
+        panelBoton.setBorder(new EmptyBorder(15, 0, 0, 0));
+        panelBoton.setAlignmentX(Component.LEFT_ALIGNMENT); // clave: evitar que se estire todo
+
+        JButton btnAplicar = new JButton("Aplicar cambios");
+        btnAplicar.setBackground(fondoPanel);
+        btnAplicar.setForeground(letra);
+        btnAplicar.setFocusPainted(false);
+        btnAplicar.setPreferredSize(new Dimension(160, 35));
+        btnAplicar.setBorder(new RoundedBorder(20, bordeDorado, 2));
+        btnAplicar.setFont(Fuentes.getBlack(14f));
+
+        panelBoton.add(btnAplicar);
+        panelAjustes.add(panelBoton);
+        
+        contentPanel.add(panelInicio, "inicio");
+        contentPanel.add(panelModelos, "modelos");
+        contentPanel.add(panelAjustes, "ajustes");
 
 // ------------------------------
 // Funcionalidades de Botones
 // ------------------------------        
 
-        btnInicio.addActionListener(e -> {
-            centro.setVisible(true);
-            derecha.setVisible(true);
-            panelModelos.setVisible(false);
-            panelAjustes.setVisible(false);
-        });
+        CardLayout cardLayout = (CardLayout) contentPanel.getLayout();
 
-        btnModelos.addActionListener(e -> {
-            sidebar.setVisible(true);
-            centro.setVisible(false);
-            derecha.setVisible(false);
-            panelModelos.setVisible(true);
-            panelAjustes.setVisible(false);
-        });
+        btnInicio.addActionListener(e -> cardLayout.show(contentPanel, "inicio"));
+
+        btnModelos.addActionListener(e -> cardLayout.show(contentPanel, "modelos"));
         
-        btnHistorial.addActionListener(e -> {
-            centro.setVisible(false);
-            derecha.setVisible(false);
-            panelModelos.setVisible(false);
-            panelAjustes.setVisible(false);
-        });
+        //btnHistorial.addActionListener(e -> cardLayout.show(contentPanel, "historial"));
 
-        btnJuego.addActionListener(e -> {
-            centro.setVisible(false);
-            derecha.setVisible(false);
-            panelModelos.setVisible(false);
-            panelAjustes.setVisible(false);
-        });
+        //btnJuego.addActionListener(e -> cardLayout.show(contentPanel, "juego"));
 
-        btnAjustes.addActionListener(e -> {
-            centro.setVisible(false);
-            derecha.setVisible(false);
-            panelModelos.setVisible(false);
-            panelAjustes.setVisible(true);
-        });
+        btnAjustes.addActionListener(e -> cardLayout.show(contentPanel, "ajustes"));
     }
 
     // Método para crear botones uniformes de 200 x 82
