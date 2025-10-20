@@ -39,6 +39,8 @@ public class NTI extends JFrame {
     
     Empresa emp = new Empresa();
     Noticia not = new Noticia();
+    Entorno ent = new Entorno();
+    
 
     public NTI() {
         setTitle("NeuroFref Trading Intelligence - 1.0");
@@ -66,7 +68,7 @@ public class NTI extends JFrame {
         panelSuperior.setBorder(new EmptyBorder(20, 0, 0, 0)); // margen superior
 
         // Cargar imagen original
-        ImageIcon logoIconOriginal = new ImageIcon(getClass().getResource("/Images/Logo.png"));
+        ImageIcon logoIconOriginal = new ImageIcon(getClass().getResource("/img/Logo.png"));
 
         // Escalar imagen a un tamaño más pequeño (excede el tamaño)
         ImageIcon logoIconEscalado = escalarImagen(logoIconOriginal, 160, 90); // ajustable (parametro)
@@ -221,14 +223,12 @@ public class NTI extends JFrame {
         noticias.setBackground(fondoPanel);
         noticias.setBorder(BorderFactory.createCompoundBorder(
                 new RoundedBorder(20, bordeDorado, 3),
-                new EmptyBorder(10, 10, 10, 10)
+                new EmptyBorder(20, 0, 10, 15) // margen interior del contenedor
         ));
-        noticias.setPreferredSize(new Dimension(450, 170));
-        noticias.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
         noticias.setAlignmentX(Component.LEFT_ALIGNMENT);
         derecha.add(noticias);
 
-        // Obtener noticias desde el archivo
+// Obtener noticias desde el archivo
         Vector<String[]> datnot = not.obtenerDatosNoticias();
         for (int i = 0; i < datnot.size(); i++) {
             String[] noticia = datnot.get(i);
@@ -236,40 +236,48 @@ public class NTI extends JFrame {
                 continue;
             }
 
-            JPanel panelNoticia = new JPanel();
-            panelNoticia.setLayout(new BoxLayout(panelNoticia, BoxLayout.X_AXIS));
+            // Panel individual de noticia
+            JPanel panelNoticia = new JPanel(new BorderLayout());
             panelNoticia.setBackground(fondoPanel);
-            panelNoticia.setBorder(new EmptyBorder(5, 10, 5, 10));
+            panelNoticia.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-            String rutaImagen = (i == 0) ? "/Images/Coca.png" : "/Images/CostaCofee.png";
-            ImageIcon icono = new ImageIcon(getClass().getResource(rutaImagen));
-            JLabel imagenLabel = new JLabel(icono);
-            imagenLabel.setBorder(new EmptyBorder(0, 0, 0, 10));
-
+            // Panel de texto con BoxLayout vertical
             JPanel textoPanel = new JPanel();
             textoPanel.setLayout(new BoxLayout(textoPanel, BoxLayout.Y_AXIS));
             textoPanel.setBackground(fondoPanel);
 
-            JLabel title = new JLabel(noticia[1]);
+            // Título usando JTextArea para ajuste automático de ancho
+            JTextArea title = new JTextArea(noticia[1]);
+            title.setWrapStyleWord(true);
+            title.setLineWrap(true);
+            title.setOpaque(false);
+            title.setEditable(false);
+            title.setFocusable(false);
             title.setForeground(Color.WHITE);
             title.setFont(Fuentes.getBlack(14f));
+            title.setAlignmentX(Component.LEFT_ALIGNMENT);
+            title.setMaximumSize(new Dimension(450, Short.MAX_VALUE)); // ancho limitado al panel
 
+            // Panel para la fuente a la derecha
+            JPanel fuentePanel = new JPanel(new BorderLayout());
+            fuentePanel.setBackground(fondoPanel);
             JLabel fuente = new JLabel(noticia[0]);
             fuente.setForeground(bordeDorado);
+            fuente.setFont(Fuentes.getBlack(12f));
+            fuente.setHorizontalAlignment(SwingConstants.RIGHT);
+            fuentePanel.add(fuente, BorderLayout.EAST);
 
-            JLabel link = new JLabel(noticia[2]);
-            link.setForeground(Color.CYAN);
-
+            // Agregar título y fuente al panel de texto
             textoPanel.add(title);
-            textoPanel.add(Box.createVerticalStrut(5));
-            textoPanel.add(fuente);
-            // textoPanel.add(link); // opcional
+            textoPanel.add(Box.createVerticalStrut(3)); // separación mínima
+            textoPanel.add(fuentePanel);
 
-            panelNoticia.add(imagenLabel);
-            panelNoticia.add(textoPanel);
+            // Agregar textoPanel al panelNoticia
+            panelNoticia.add(textoPanel, BorderLayout.CENTER);
 
+            // Añadir al panel general
             noticias.add(panelNoticia);
-            noticias.add(Box.createVerticalStrut(10));
+            noticias.add(Box.createVerticalStrut(10)); // espacio entre noticias
         }
 
         // Se agrega el panel derecho al panel principal
@@ -458,7 +466,6 @@ public class NTI extends JFrame {
                     toggle.setForeground(Color.BLACK);
                 }
             });
-            // disparar el cambio inicial
             for (javax.swing.event.ChangeListener cl : toggle.getChangeListeners()) {
                 cl.stateChanged(new ChangeEvent(toggle));
             }
@@ -515,12 +522,55 @@ public class NTI extends JFrame {
             
         // Espaciador flexible antes del botón para empujar hacia abajo
         panelAjustes.add(Box.createVerticalGlue());
+        
+        String[] config = ent.conseguirConfig();
+        if (config != null) {
+            // COMBOBOX MONEDA
+            for (int i = 0; i < cbMoneda.getItemCount(); i++) {
+                if (cbMoneda.getItemAt(i).equals(config[0])) {
+                    cbMoneda.setSelectedIndex(i);
+                    break;
+                }
+            }
 
-        // Panel contenedor para el botón alineado a la derecha
+            // COMBOBOX IDIOMA
+            for (int i = 0; i < cbIdioma.getItemCount(); i++) {
+                if (cbIdioma.getItemAt(i).equals(config[1])) {
+                    cbIdioma.setSelectedIndex(i);
+                    break;
+                }
+            }
+
+            // TOGGLES
+            toggleSonido.setSelected(Boolean.parseBoolean(config[2]));
+            toggleOscuro.setSelected(Boolean.parseBoolean(config[3]));
+            toggleRed.setSelected(Boolean.parseBoolean(config[4]));
+            
+            //esto es para el cambio de color, nota: despues si se cambia el toogle por ua version mas linda cambiar esto tambien.
+            for (javax.swing.event.ChangeListener cl : toggleSonido.getChangeListeners()) {
+                cl.stateChanged(new ChangeEvent(toggleSonido));
+            }
+            for (javax.swing.event.ChangeListener cl : toggleOscuro.getChangeListeners()) {
+                cl.stateChanged(new ChangeEvent(toggleOscuro));
+            }
+            for (javax.swing.event.ChangeListener cl : toggleRed.getChangeListeners()) {
+                cl.stateChanged(new ChangeEvent(toggleRed));
+            }
+        } else {
+            // Si no se encontró el archivo, mostrar un mensaje
+            JOptionPane.showMessageDialog(
+                    null,
+                    "No se encontró el archivo de configuración. Se usarán valores por defecto.",
+                    "Archivo no encontrado",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        }
+
+        // Panel contenedor para Aplicar Cambios
         JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         panelBoton.setOpaque(false);
         panelBoton.setBorder(new EmptyBorder(15, 0, 0, 0));
-        panelBoton.setAlignmentX(Component.LEFT_ALIGNMENT); // clave: evitar que se estire todo
+        panelBoton.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JButton btnAplicar = new JButton("Aplicar cambios");
         btnAplicar.setBackground(fondoPanel);
@@ -533,6 +583,7 @@ public class NTI extends JFrame {
         panelBoton.add(btnAplicar);
         panelAjustes.add(panelBoton);
         
+        //agregamos los paneles al card
         contentPanel.add(panelInicio, "inicio");
         contentPanel.add(panelModelos, "modelos");
         contentPanel.add(panelAjustes, "ajustes");
@@ -547,11 +598,38 @@ public class NTI extends JFrame {
 
         btnModelos.addActionListener(e -> cardLayout.show(contentPanel, "modelos"));
         
-        //btnHistorial.addActionListener(e -> cardLayout.show(contentPanel, "historial"));
+        //btnHistorial.addActionListener(e -> cardLayout.show(contentPanel, "historial")); todavia no tienen paneles asignados
 
-        //btnJuego.addActionListener(e -> cardLayout.show(contentPanel, "juego"));
+        //btnJuego.addActionListener(e -> cardLayout.show(contentPanel, "juego")); todavia no tienen paneles asignados
 
         btnAjustes.addActionListener(e -> cardLayout.show(contentPanel, "ajustes"));
+        
+        btnAplicar.addActionListener(e -> {
+            // Obtener valores de los ComboBox
+            String monedaS = (String) cbMoneda.getSelectedItem();
+            String idiomaS = (String) cbIdioma.getSelectedItem();
+
+            // Obtener estados de los toggles
+            boolean sfxR = toggleSonido.isSelected();
+            boolean modoR = toggleOscuro.isSelected();
+            boolean rdrR = toggleRed.isSelected();
+
+            // Aquí puedes procesar los valores, guardarlos o aplicarlos
+            System.out.println("Moneda: " + monedaS);
+            System.out.println("Idioma: " + idiomaS);
+            System.out.println("Efectos de sonido: " + sfxR);
+            System.out.println("Modo oscuro: " + modoR);
+            System.out.println("Red de refinamiento: " + rdrR);
+
+            boolean resultado = ent.enviarNConfig(monedaS, idiomaS, sfxR, modoR, rdrR);
+
+            // Mostrar mensaje según el resultado
+            if (resultado) {
+                JOptionPane.showMessageDialog(null, "Cambios guardados con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, "Ocurrió un problema, inténtelo de nuevo", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 
     // Crear botones de la sidebar
