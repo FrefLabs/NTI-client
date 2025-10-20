@@ -11,4 +11,16 @@ package NTI;
  */
 public class Entorno {
     
+    Registro reg = new Registro();
+    Lectura lec = new Lectura();
+    
+    public boolean enviarNConfig(String mon, String idm, boolean sfx, boolean modo, boolean rdr){
+        boolean v = reg.actualizarCofig(mon, idm, sfx, modo, rdr); 
+        return(v);
+    }
+    
+    public String[] conseguirConfig(){
+        String[] valores = lec.obtenerConfig();
+        return(valores);
+    }
 }
