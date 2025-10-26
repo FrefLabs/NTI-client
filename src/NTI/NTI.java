@@ -228,14 +228,10 @@ public class NTI extends JFrame {
         noticias.setAlignmentX(Component.LEFT_ALIGNMENT);
         derecha.add(noticias);
 
-// Obtener noticias desde el archivo
-        Vector<String[]> datnot = not.obtenerDatosNoticias();
-        for (int i = 0; i < datnot.size(); i++) {
-            String[] noticia = datnot.get(i);
-            if (noticia.length < 3) {
-                continue;
-            }
-
+        // Obtener noticias desde la base de datos
+        Vector<Tupla> datnot = not.getDatos();
+        
+        for (Tupla noticia : datnot) {
             // Panel individual de noticia
             JPanel panelNoticia = new JPanel(new BorderLayout());
             panelNoticia.setBackground(fondoPanel);
@@ -247,7 +243,7 @@ public class NTI extends JFrame {
             textoPanel.setBackground(fondoPanel);
 
             // Título usando JTextArea para ajuste automático de ancho
-            JTextArea title = new JTextArea(noticia[1]);
+            JTextArea title = new JTextArea(noticia.getTitulo());
             title.setWrapStyleWord(true);
             title.setLineWrap(true);
             title.setOpaque(false);
@@ -256,20 +252,20 @@ public class NTI extends JFrame {
             title.setForeground(Color.WHITE);
             title.setFont(Fuentes.getBlack(14f));
             title.setAlignmentX(Component.LEFT_ALIGNMENT);
-            title.setMaximumSize(new Dimension(450, Short.MAX_VALUE)); // ancho limitado al panel
+            title.setMaximumSize(new Dimension(450, Short.MAX_VALUE));
 
             // Panel para la fuente a la derecha
             JPanel fuentePanel = new JPanel(new BorderLayout());
             fuentePanel.setBackground(fondoPanel);
-            JLabel fuente = new JLabel(noticia[0]);
-            fuente.setForeground(bordeDorado);
-            fuente.setFont(Fuentes.getBlack(12f));
-            fuente.setHorizontalAlignment(SwingConstants.RIGHT);
-            fuentePanel.add(fuente, BorderLayout.EAST);
+            JLabel fuenteLabel = new JLabel(noticia.getFuente());
+            fuenteLabel.setForeground(bordeDorado);
+            fuenteLabel.setFont(Fuentes.getBlack(12f));
+            fuenteLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+            fuentePanel.add(fuenteLabel, BorderLayout.EAST);
 
             // Agregar título y fuente al panel de texto
             textoPanel.add(title);
-            textoPanel.add(Box.createVerticalStrut(3)); // separación mínima
+            textoPanel.add(Box.createVerticalStrut(3));
             textoPanel.add(fuentePanel);
 
             // Agregar textoPanel al panelNoticia
@@ -277,7 +273,7 @@ public class NTI extends JFrame {
 
             // Añadir al panel general
             noticias.add(panelNoticia);
-            noticias.add(Box.createVerticalStrut(10)); // espacio entre noticias
+            noticias.add(Box.createVerticalStrut(10));
         }
 
         // Se agrega el panel derecho al panel principal
@@ -293,7 +289,7 @@ public class NTI extends JFrame {
         JPanel panelModelos = new JPanel();
         panelModelos.setLayout(new BorderLayout(20, 20));
         panelModelos.setBackground(fondo);
-        panelModelos.setBorder(new EmptyBorder(30, 20, 30, 20));
+        panelModelos.setBorder(new EmptyBorder(30, 50, 30, 50));
         panelModelos.setVisible(false); // oculto por defecto
 
         //--------------------------------
@@ -302,17 +298,14 @@ public class NTI extends JFrame {
         JPanel barraSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT));
         barraSuperior.setBackground(fondoPanel);
         barraSuperior.setBorder(new RoundedBorder(20, bordeDorado, 3));
-        barraSuperior.setPreferredSize(new Dimension(600, 40));
+        barraSuperior.setPreferredSize(new Dimension(600, 50));
 
         // Campo de texto
         JTextField txtBuscarModelo = new JTextField("Buscar modelo...");
         txtBuscarModelo.setBackground(fondoPanel);
         txtBuscarModelo.setForeground(Color.LIGHT_GRAY);
         txtBuscarModelo.setCaretColor(Color.WHITE);
-        txtBuscarModelo.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(15, bordeDorado, 2), // Borde redondeado con grosor 2
-            BorderFactory.createEmptyBorder(5, 10, 5, 10) // Margen interno
-        ));
+        txtBuscarModelo.setBorder(new EmptyBorder(10, 5, 10, 5));
 
         // Añadir el campo de texto a la barra superior
         barraSuperior.add(txtBuscarModelo, BorderLayout.CENTER);
@@ -327,7 +320,7 @@ public class NTI extends JFrame {
         JPanel contenidoModelos = new JPanel();
         contenidoModelos.setLayout(new BoxLayout(contenidoModelos, BoxLayout.Y_AXIS));
         contenidoModelos.setBackground(fondo);
-        contenidoModelos.setBorder(new EmptyBorder(10, 10, 10, 10));
+        contenidoModelos.setBorder(new EmptyBorder(10, 0, 10, 0));
 
         // TÍTULO “MODELOS INSTALADOS”
         JLabel lblTituloModelos = new JLabel("<html><span style='color:" + letraStr +";'>Modelos</span> <span style='color:" + bordedoradoStr + ";'>instalados</span></html>");

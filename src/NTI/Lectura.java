@@ -5,6 +5,10 @@ import java.util.Vector;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import org.json.JSONObject;
+
 
 public class Lectura {
 
@@ -12,6 +16,7 @@ public class Lectura {
     private static final String URL = "jdbc:mariadb://br1.aguilucho.ar:25579/NTI";
     private static final String USUARIO = "nti";
     private static final String PASSWORD = "NTISystem070104!";
+    private static final String CONFIG_FILE = "api_config.json";
 
     public Vector<Empresa> obtenerEmpresasDesdeBD() {
         Vector<Empresa> empresas = new Vector<>();
@@ -130,4 +135,78 @@ public class Lectura {
 
         return null;
     }
+    
+    public String obtenerKey(String nombre) {
+        try (BufferedReader br = new BufferedReader(new FileReader(CONFIG_FILE))) {
+            StringBuilder sb = new StringBuilder();
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                sb.append(linea);
+            }
+
+            JSONObject obj = new JSONObject(sb.toString());
+
+            if (!obj.has(nombre)) {
+                System.err.println("No se encontró la clave para la API: " + nombre);
+                return "";
+            }
+
+            return obj.getString(nombre);
+
+        } catch (IOException e) {
+            System.err.println("Error leyendo archivo JSON: " + e.getMessage());
+            return "";
+        }
+    }
+
+    
+    public Vector<Tupla> obtenerDatosN(Date fecha) {
+        Vector<Tupla> lista = new Vector<>();
+        String sql = "{CALL ObtenerNoticiasPorFecha(?)}";
+
+        try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+                CallableStatement stmt = conn.prepareCall(sql)) {
+
+            java.sql.Date sqlDate = new java.sql.Date(fecha.getTime());
+            stmt.setDate(1, sqlDate);
+
+            boolean tieneResultados = stmt.execute();
+
+            if (tieneResultados) {
+                try (ResultSet rs = stmt.getResultSet()) {
+                    ResultSetMetaData meta = rs.getMetaData();
+
+                    // Si no existen las columnas esperadas, devolvemos vacío
+                    boolean columnasValidas = false;
+                    for (int i = 1; i <= meta.getColumnCount(); i++) {
+                        String col = meta.getColumnLabel(i);
+                        if (col.equalsIgnoreCase("URL") || col.equalsIgnoreCase("Titular") || col.equalsIgnoreCase("Fuente")) {
+                            columnasValidas = true;
+                            break;
+                        }
+                    }
+                    if (!columnasValidas) {
+                        System.out.println("No se obtuvieron noticias.");
+                        return lista; // vector vacío
+                    }
+
+                    // Recorremos resultados
+                    while (rs.next()) {
+                        String url = rs.getString("URL");
+                        String titular = rs.getString("Titular");
+                        String fuente = rs.getString("Fuente");
+                        String fechaStr = new SimpleDateFormat("yyyy-MM-dd").format(fecha);
+
+                        lista.add(new Tupla(titular, fuente, url, fechaStr));
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error al obtener noticias por fecha: " + e.getMessage());
+        }
+
+        return lista; // puede estar vacío si no hay noticias
+    }
+
 }

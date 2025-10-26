@@ -9,8 +9,14 @@ package NTI;
 import java.io.FileWriter;
 import java.io.IOException;
 import org.json.JSONObject;
+import java.sql.*;
 
 public class Registro {
+    
+    private static final String URL = "jdbc:mariadb://br1.aguilucho.ar:25579/NTI";
+    private static final String USUARIO = "nti";
+    private static final String PASSWORD = "NTISystem070104!";
+    
     public boolean actualizarCofig(String mon, String idm, boolean sfx, boolean modo, boolean rdr) {
         boolean result = false;
 
@@ -33,5 +39,26 @@ public class Registro {
         }
 
         return result;
+    }
+    
+    public boolean cargaDatosN(Tupla noticia) {
+        String sql = "{CALL InsertarDatosNoticia(?, ?, ?, ?)}";
+
+        try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+             CallableStatement stmt = conn.prepareCall(sql)) {
+
+            stmt.setString(1, noticia.getUrl());
+            stmt.setString(2, noticia.getTitulo());
+            stmt.setDate(3, java.sql.Date.valueOf(noticia.getFecha())); // YYYY-MM-DD
+            stmt.setString(4, noticia.getFuente());
+
+            stmt.execute();
+            System.out.println("Noticia insertada: " + noticia.getTitulo());
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("Error al insertar noticia '" + noticia.getTitulo() + "': " + e.getMessage());
+            return false;
+        }
     }
 }

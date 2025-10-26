@@ -14,63 +14,30 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Vector;
+import java.util.Date;
 
 public class Noticia {
     
+    Lectura lec = new Lectura();
     
-    public static final String ARCHIVO_NOTICIA = "noticias.txt";
-    
-    public Vector<String[]> obtenerDatosNoticias() {
-    Vector<String[]> vectorNoticias = new Vector<>();
-    String linea;
+    public Vector<Tupla> getDatos() {
+        Date fecha = new Date(); // fecha del sistema
+        Vector<Tupla> noticias = lec.obtenerDatosN(fecha);
 
-    try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO_NOTICIA))) {
-        while ((linea = br.readLine()) != null) {
-            // Saltar líneas vacías si las hubiera
-            if (linea.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] fila = separarLinea(linea);
-            vectorNoticias.add(fila);
-        }
-    } catch (IOException e) {
-        System.out.println("Error al leer el archivo: " + e.getMessage());
-    }
-    
-    return vectorNoticias;
-    }
-
-    
-    private String[] separarLinea(String linea) {
-        Vector<String> campos = new Vector<>();
-        boolean entreComillas = false;
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < linea.length(); i++) {
-            char c = linea.charAt(i);
-
-            if (c == '\"') {
-                // Cambia el estado al encontrar comillas
-                entreComillas = !entreComillas;
-            } else if (c == ';' && !entreComillas) {
-                // Nuevo campo encontrado
-                campos.add(sb.toString().trim());
-                sb.setLength(0); // Reinicia el StringBuilder
+        // Si no hay noticias, ejecutamos flujo de API
+        if (noticias.isEmpty()) {
+            Api api = new Api("Finnhub");
+            api.setDatos();
+            System.out.println("No hay noticias para hoy. Ejecutando flujo de API...");
+            boolean exito = api.obtenerDatosN(); // aquí tu API inserta 2 noticias
+            if (exito) {
+                // Recargamos las noticias recién insertadas
+                noticias = lec.obtenerDatosN(fecha);
             } else {
-                sb.append(c);
+                System.err.println("No se obtuvieron noticias desde la API");
             }
         }
 
-        // Agregar el último campo al final
-        campos.add(sb.toString().trim());
-
-        // Convertir Vector a array
-        String[] arrayCampos = new String[campos.size()];
-        for (int i = 0; i < campos.size(); i++) {
-            arrayCampos[i] = campos.get(i);
-        }
-
-        return arrayCampos;
+        return noticias;
     }
 }
