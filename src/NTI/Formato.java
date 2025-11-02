@@ -68,4 +68,19 @@ public class Formato {
 
         return listaNoticias;
     }
+    
+    public static boolean validarNombre(String nombre) {
+        // Verifica longitud
+        if (nombre == null || nombre.length() < 3 || nombre.length() > 10) {
+            return false;
+        }
+        // Verifica solo letras
+        for (int i = 0; i < nombre.length(); i++) {
+            char c = nombre.charAt(i);
+            if (!Character.isLetter(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

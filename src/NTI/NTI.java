@@ -21,6 +21,8 @@ import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
+import juego.PanelJuego; // (NUEVO) 1. Importar el panel del juego
+
 public class NTI extends JFrame {
     
     // Contenedor principal para las páginas
@@ -41,6 +43,8 @@ public class NTI extends JFrame {
     Noticia not = new Noticia();
     Entorno ent = new Entorno();
     
+    // (NUEVO) 2. Declarar el panel del juego como variable de clase
+    private PanelJuego panelJuego;
 
     public NTI() {
         setTitle("NeuroFref Trading Intelligence - 1.0");
@@ -54,7 +58,7 @@ public class NTI extends JFrame {
         add(contentPanel, BorderLayout.CENTER);
 
         // -------------------------------    
-        // SIDEBAR - TODAS LAS PAGINAS 
+        // SIDEBAR - TODAS LAS PAGINAS  
         // -------------------------------  
         JPanel sidebar = new JPanel();
         sidebar.setPreferredSize(new Dimension(200, getHeight()));
@@ -362,7 +366,7 @@ public class NTI extends JFrame {
         panelSuperiorKO.add(panelInfo, BorderLayout.WEST);
 
         // Botón "Seleccionado"
-        JButton btnSeleccionado = new JButton("        Seleccionado        ");
+        JButton btnSeleccionado = new JButton("      Seleccionado       ");
         btnSeleccionado.setBackground(Color.decode("#1E2A5A"));
         btnSeleccionado.setForeground(letra);
         btnSeleccionado.setFont(Fuentes.getBold(14f));
@@ -512,7 +516,7 @@ public class NTI extends JFrame {
         estilizarToggle.accept(toggleRed);
         JPanel panelRed = crearPanelAjuste.apply(textosRed, toggleRed);
         panelAjustes.add(panelRed);
-            
+                
         // Espaciador flexible antes del botón para empujar hacia abajo
         panelAjustes.add(Box.createVerticalGlue());
         
@@ -576,10 +580,15 @@ public class NTI extends JFrame {
         panelBoton.add(btnAplicar);
         panelAjustes.add(panelBoton);
         
+        
+        // (NUEVO) 3. Inicializar el panel del juego
+        panelJuego = new PanelJuego();
+        
         //agregamos los paneles al card
         contentPanel.add(panelInicio, "inicio");
         contentPanel.add(panelModelos, "modelos");
         contentPanel.add(panelAjustes, "ajustes");
+        contentPanel.add(panelJuego, "juego"); // (NUEVO) 3. Añadir el panel del juego al CardLayout
 
 // ------------------------------
 // Funcionalidades de Botones
@@ -587,36 +596,44 @@ public class NTI extends JFrame {
 
         CardLayout cardLayout = (CardLayout) contentPanel.getLayout();
 
-        btnInicio.addActionListener(e -> cardLayout.show(contentPanel, "inicio"));
-
-        btnModelos.addActionListener(e -> cardLayout.show(contentPanel, "modelos"));
+        // (NUEVO) 4. Añadir "ganchos" a los botones para los timers
         
-        //btnHistorial.addActionListener(e -> cardLayout.show(contentPanel, "historial")); todavia no tienen paneles asignados
+        btnInicio.addActionListener(e -> {
+            cardLayout.show(contentPanel, "inicio");
+            panelJuego.onPanelOcultado(); // Detener timers del juego
+        });
 
-        //btnJuego.addActionListener(e -> cardLayout.show(contentPanel, "juego")); todavia no tienen paneles asignados
+        btnModelos.addActionListener(e -> {
+            cardLayout.show(contentPanel, "modelos");
+            panelJuego.onPanelOcultado(); // Detener timers del juego
+        });
+        
+        //btnHistorial.addActionListener(e -> cardLayout.show(contentPanel, "historial")); 
+        // Si lo habilitas, añade: panelJuego.onPanelOcultado();
 
-        btnAjustes.addActionListener(e -> cardLayout.show(contentPanel, "ajustes"));
+        btnJuego.addActionListener(e -> { // Botón de la sidebar
+            cardLayout.show(contentPanel, "juego");
+            panelJuego.onPanelMostrado(); // Iniciar timers del juego
+        }); 
+
+        btnAjustes.addActionListener(e -> {
+            cardLayout.show(contentPanel, "ajustes");
+            panelJuego.onPanelOcultado(); // Detener timers del juego
+        });
         
         btnAplicar.addActionListener(e -> {
-            // Obtener valores de los ComboBox
+            // ... (Tu código de aplicar cambios) ...
             String monedaS = (String) cbMoneda.getSelectedItem();
             String idiomaS = (String) cbIdioma.getSelectedItem();
-
-            // Obtener estados de los toggles
             boolean sfxR = toggleSonido.isSelected();
             boolean modoR = toggleOscuro.isSelected();
             boolean rdrR = toggleRed.isSelected();
-
-            // Aquí puedes procesar los valores, guardarlos o aplicarlos
             System.out.println("Moneda: " + monedaS);
             System.out.println("Idioma: " + idiomaS);
             System.out.println("Efectos de sonido: " + sfxR);
             System.out.println("Modo oscuro: " + modoR);
             System.out.println("Red de refinamiento: " + rdrR);
-
             boolean resultado = ent.enviarNConfig(monedaS, idiomaS, sfxR, modoR, rdrR);
-
-            // Mostrar mensaje según el resultado
             if (resultado) {
                 JOptionPane.showMessageDialog(null, "Cambios guardados con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } else {
@@ -821,7 +838,8 @@ public class NTI extends JFrame {
     /**
      * Clase para crear bordes redondeados personalizados.
      */
-    private static class RoundedBorder implements Border {
+    // (NUEVO) ¡IMPORTANTE! Debe ser 'public static' para que PanelJuego pueda usarla.
+    public static class RoundedBorder implements Border {
         private int radius;
         private Color color;
         private int thickness;
