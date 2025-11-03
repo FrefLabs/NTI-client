@@ -61,4 +61,45 @@ public class Registro {
             return false;
         }
     }
+    
+    public boolean guardarPartida(String nombre, int puntaje, int ronda, java.util.Date fecha, String modo, String simbolo) {
+        
+        String sql = "{CALL InsertarDatosPartida(?, ?, ?, ?, ?, ?)}";
+
+        try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+             CallableStatement stmt = conn.prepareCall(sql)) {
+
+            stmt.setString(1, nombre);
+            stmt.setInt(2, puntaje);
+            stmt.setInt(3, ronda);
+            stmt.setDate(4, new java.sql.Date(fecha.getTime())); // Convertir util.Date a sql.Date
+            stmt.setString(5, modo);
+            stmt.setString(6, simbolo);
+
+            // Ejecutar el SP y verificar el resultado
+            boolean hasResult = stmt.execute();
+            
+            if (hasResult) {
+                try (ResultSet rs = stmt.getResultSet()) {
+                    if (rs.next()) {
+                        String estado = rs.getString("Estado");
+                        if (estado.equals("EXITO")) {
+                            System.out.println("Partida guardada exitosamente. ID: " + rs.getInt("IdPartida"));
+                            return true;
+                        } else {
+                            // Error controlado por el SP (ej. Símbolo no existe)
+                            System.err.println("Error al guardar partida (SP): " + rs.getString("Mensaje"));
+                            return false;
+                        }
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error de SQL al guardar partida: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
 }
