@@ -37,17 +37,19 @@ public class Modelo {
     }
     
     public Vector<Map<String, Object>> obtenerTop3ParaVista() {
-        if (this.lectura == null);
+        if (this.lectura == null) {
+            /* ... error ... */ }
 
-        return lectura.getModelosRecomendados(0);
+        // El panel de inicio (panelInicio) llama con LÍMITE 3
+        return lectura.getModelosRecomendados(0, 3);
     }
     
     public Vector<Map<String, Object>> obtenerRecomendados() {
         if (this.lectura == null) {
             /* ... error ... */ }
 
-        // Excluir el que ya está seleccionado
-        return lectura.getModelosRecomendados(this.IDModeloSeleccionado);
+        // El panel de modelos (panelModelos) llama con LÍMITE 10
+        return lectura.getModelosRecomendados(this.IDModeloSeleccionado, 10);
     }
 
 // Método para el panel "Modelo Seleccionado"
@@ -62,5 +64,21 @@ public class Modelo {
         if (this.lectura == null) {
             /* ... error ... */ }
         return lectura.getDetallesModelo(idModelo);
+    }
+    
+    public Vector<Map<String, Object>> obtenerHistorialModelo() {
+        if (this.lectura == null) { 
+            System.err.println("Lectura no inicializada en Modelo");
+            return new Vector<>(); 
+        }
+        return lectura.getHistorialModelo(this.IDModeloSeleccionado);
+    }
+    
+    public Vector<Map<String, Object>> buscarModelos(String busqueda) {
+        if (this.lectura == null) { 
+            System.err.println("Lectura no inicializada en Modelo");
+            return new Vector<>(); 
+        }
+        return lectura.buscarModelosEnBD(busqueda);
     }
 }

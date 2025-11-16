@@ -216,15 +216,17 @@ public class Lectura {
         return rankings;
     }
     
-    public Vector<Map<String, Object>> getModelosRecomendados(int idModeloAExcluir) {
+    public Vector<Map<String, Object>> getModelosRecomendados(int idModeloAExcluir, int limite) {
         Vector<Map<String, Object>> topModelos = new Vector<>();
-        // Llama al SP con el parámetro
-        String sql = "{CALL ObtenerTop3Modelos(?)}";
+
+        // (MODIFICADO) 2. Añadir '?' a la llamada SQL
+        String sql = "{CALL ObtenerTop3Modelos(?, ?)}";
 
         try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
                 CallableStatement stmt = conn.prepareCall(sql)) {
 
-            stmt.setInt(1, idModeloAExcluir); // Settear el parámetro
+            stmt.setInt(1, idModeloAExcluir);
+            stmt.setInt(2, limite); // (NUEVO) 3. Settear el parámetro
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -314,4 +316,59 @@ public class Lectura {
         return detalles;
     }
     
+    public Vector<Map<String, Object>> getHistorialModelo(int idModelo) {
+        Vector<Map<String, Object>> historial = new Vector<>();
+        String sql = "{CALL ObtenerHistorialModelo(?)}";
+
+        try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+             CallableStatement stmt = conn.prepareCall(sql)) {
+            
+            stmt.setInt(1, idModelo);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> fila = new HashMap<>();
+                    fila.put("H_Fecha", rs.getDate("H_Fecha"));
+                    fila.put("Prediccion", rs.getDouble("Prediccion"));
+                    fila.put("ValorAbierto", rs.getDouble("ValorAbierto"));
+                    fila.put("ValorCerrado", rs.getDouble("ValorCerrado"));
+                    fila.put("ValorAlto", rs.getDouble("ValorAlto"));
+                    fila.put("ValorBajo", rs.getDouble("ValorBajo"));
+                    historial.add(fila);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error de SQL al obtener historial del modelo: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return historial;
+    }
+    
+    public Vector<Map<String, Object>> buscarModelosEnBD(String busqueda) {
+        Vector<Map<String, Object>> resultados = new Vector<>();
+        String sql = "{CALL BuscarModelos(?)}";
+
+        try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+             CallableStatement stmt = conn.prepareCall(sql)) {
+            
+            stmt.setString(1, busqueda);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> modelo = new HashMap<>();
+                    modelo.put("IDModelo", rs.getInt("IDModelo"));
+                    modelo.put("Simbolo", rs.getString("Simbolo"));
+                    modelo.put("Precision", rs.getDouble("Precision"));
+                    modelo.put("FechaIni", rs.getDate("FechaIni"));
+                    modelo.put("FechaFin", rs.getDate("FechaFin"));
+                    modelo.put("MAE", rs.getDouble("MAE"));
+                    resultados.add(modelo);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error de SQL al buscar modelos: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return resultados;
+    }
 }
