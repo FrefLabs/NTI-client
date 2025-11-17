@@ -14,7 +14,11 @@ import org.json.JSONObject;
 
 public class Formato {
 
-    public Vector<Tupla> formatDatosN(String key) {
+    /**
+     * (MODIFICADO)
+     * Ahora acepta un 'simbolo' y lo usa en la URL de la API.
+     */
+    public Vector<Tupla> formatDatosN(String key, String simbolo) {
         Vector<Tupla> listaNoticias = new Vector<>();
 
         try {
@@ -32,8 +36,8 @@ public class Formato {
             String fechaHoy = sdf.format(hoy);
             String fechaInicio = sdf.format(hace5Dias);
 
-            // URL con rango de 5 días
-            String urlStr = "https://finnhub.io/api/v1/company-news?symbol=KO&from="
+            // (MODIFICADO: Usa 'simbolo' en lugar de 'KO')
+            String urlStr = "https://finnhub.io/api/v1/company-news?symbol=" + simbolo + "&from="
                     + fechaInicio + "&to=" + fechaHoy + "&token=" + key;
 
             URL url = new URL(urlStr);
@@ -50,7 +54,6 @@ public class Formato {
 
             JSONArray noticias = new JSONArray(response.toString());
 
-            // Solo tomar las dos primeras noticias
             int limite = Math.min(2, noticias.length());
             for (int i = 0; i < limite; i++) {
                 JSONObject obj = noticias.getJSONObject(i);

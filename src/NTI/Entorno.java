@@ -14,8 +14,8 @@ public class Entorno {
     Registro reg = new Registro();
     Lectura lec = new Lectura();
     
-    public boolean enviarNConfig(String mon, String idm, boolean sfx, boolean modo, boolean rdr){
-        boolean v = reg.actualizarCofig(mon, idm, sfx, modo, rdr); 
+    public boolean enviarNConfig(String mon, boolean sfx, boolean rdr, int idModelo, String estiloGrafica){
+        boolean v = reg.actualizarCofig(mon, sfx, rdr, idModelo, estiloGrafica); 
         return(v);
     }
     

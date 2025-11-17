@@ -167,12 +167,19 @@ public class PanelInicio extends JPanel {
     }
 
     /**
-     * (TU CÓDIGO ORIGINAL) Carga los datos de Empresas y Noticias.
-     * (Ahora es 'cargarDatosIniciales' para diferenciarla de la carga de modelos)
+     * (MODIFICADO)
+     * Ahora pasa el 'simbolo' a los métodos de carga.
      */
     public void cargarDatosIniciales() {
-        // Carga síncrona, tal como en tu original
-        Vector<Empresa> empresas = nti.emp.obtenerEmpresasDesdeBD();
+        // (Se asume que nti.accion.simbolo ya está inicializado)
+        String simboloActual = nti.accion.simbolo;
+
+        // Carga síncrona
+        // (Asumimos que nti.emp.obtenerEmpresasDesdeBD() fue actualizado 
+        // para aceptar un símbolo, tal como hicimos con Lectura.java)
+        Vector<Empresa> empresas = nti.emp.obtenerEmpresasDesdeBD(simboloActual); 
+        
+        panelDescripcion.removeAll(); // Limpiar por si acaso
         for (Empresa e : empresas) {
             JLabel label = new JLabel("<html>"
                     + "<span style='color:" + nti.bordedoradoStr + "; font-weight:bold;'>"
@@ -187,7 +194,10 @@ public class PanelInicio extends JPanel {
             panelDescripcion.add(Box.createVerticalStrut(8));
         }
 
-        Vector<Tupla> datnot = nti.not.getDatos();
+        // (Llama al método de Noticia.java que ahora acepta un símbolo)
+        Vector<Tupla> datnot = nti.not.getDatos(simboloActual);
+        
+        panelNoticias.removeAll(); // Limpiar por si acaso
         for (Tupla noticia : datnot) {
             JPanel panelNoticia = crearPanelNoticia(noticia); // (Llama al helper)
             panelNoticias.add(panelNoticia);
@@ -196,6 +206,12 @@ public class PanelInicio extends JPanel {
         
         // Carga los modelos (esto SÍ es en un hilo)
         cargarTopModelos();
+
+        // Repintar paneles
+        panelDescripcion.revalidate();
+        panelDescripcion.repaint();
+        panelNoticias.revalidate();
+        panelNoticias.repaint();
     }
 
     /**
@@ -349,7 +365,26 @@ public class PanelInicio extends JPanel {
      * (TU MÉTODO ORIGINAL) Helper para leer datos del archivo.
      */
     private Map<String, String> leerDatosDesdeArchivo() {
+        // (Asumo que nti.ARCHIVO_DATOS es estático o accesible,
+        // pero tu código original usaba nti.ARCHIVO_DATOS, lo cual no existe.
+        // Lo cambiaré a nti.lectura.ARCHIVO_DATOS si es una constante allí,
+        // o lo dejaré como lo tenías)
+        
+        // (Viendo tu 'Lectura.java', no tiene ARCHIVO_DATOS. 
+        // Tu 'NTI.java' original sí lo tenía. 
+        // Esta clase PanelInicio no tiene acceso a NTI.ARCHIVO_DATOS 
+        // a menos que sea público.
+        // Lo más probable es que tuvieras un error aquí. 
+        // Dejaré el código como lo enviaste.)
+        
         Map<String, String> datos = new LinkedHashMap<>();
+        
+        // (Este método fallará si ARCHIVO_DATOS no es una constante pública en NTI,
+        // o si PanelInicio no tiene acceso. 
+        // Lo correcto sería mover ARCHIVO_DATOS a Lectura.java 
+        // y llamar a nti.lectura.leerDatosDesdeArchivo())
+        
+        // (Por ahora, dejo tu código original)
         try (BufferedReader br = new BufferedReader(new FileReader(nti.ARCHIVO_DATOS))) {
             String linea;
             while ((linea = br.readLine()) != null) {

@@ -1,14 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package NTI;
-
-/**
- *
- * @author Usuario
- */
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -20,21 +10,30 @@ public class Noticia {
     
     Lectura lec = new Lectura();
     
-    public Vector<Tupla> getDatos() {
+    /**
+     * (MODIFICADO)
+     * Ahora acepta un 'simbolo' y lo pasa a los métodos de lectura y api.
+     */
+    public Vector<Tupla> getDatos(String simbolo) {
         Date fecha = new Date(); // fecha del sistema
-        Vector<Tupla> noticias = lec.obtenerDatosN(fecha);
+        
+        // (Pasa el símbolo a Lectura)
+        Vector<Tupla> noticias = lec.obtenerDatosN(fecha, simbolo);
 
         // Si no hay noticias, ejecutamos flujo de API
         if (noticias.isEmpty()) {
             Api api = new Api("Finnhub");
             api.setDatos();
-            System.out.println("No hay noticias para hoy. Ejecutando flujo de API...");
-            boolean exito = api.obtenerDatosN(); // aquí tu API inserta 2 noticias
+            System.out.println("No hay noticias para hoy. Ejecutando flujo de API para: " + simbolo);
+            
+            // (Pasa el símbolo a la Api)
+            boolean exito = api.obtenerDatosN(simbolo); 
+            
             if (exito) {
                 // Recargamos las noticias recién insertadas
-                noticias = lec.obtenerDatosN(fecha);
+                noticias = lec.obtenerDatosN(fecha, simbolo);
             } else {
-                System.err.println("No se obtuvieron noticias desde la API");
+                System.err.println("No se obtuvieron noticias desde la API para: " + simbolo);
             }
         }
 

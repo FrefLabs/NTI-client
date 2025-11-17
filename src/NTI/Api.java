@@ -22,22 +22,26 @@ public class Api {
         return key;
     }
 
-    // Ahora devuelve boolean
-    public boolean obtenerDatosN() {
-        Vector<Tupla> noticias = form.formatDatosN(key);
+    /**
+     * (MODIFICADO)
+     * Ahora acepta un 'simbolo' y lo pasa a formato y registro.
+     */
+    public boolean obtenerDatosN(String simbolo) {
+        // (Pasa el símbolo a Formato)
+        Vector<Tupla> noticias = form.formatDatosN(key, simbolo);
 
         if (noticias.isEmpty()) {
             System.out.println("No se obtuvieron noticias.");
             return false;
         }
 
-        // solo dos (las que necesitamos por ahora)
         int limite = Math.min(2, noticias.size());
         boolean exito = false;
 
         for (int i = 0; i < limite; i++) {
             Tupla n = noticias.get(i);
-            boolean insertOk = reg.cargaDatosN(n);
+            // (Pasa la tupla Y el símbolo a Registro)
+            boolean insertOk = reg.cargaDatosN(n, simbolo);
             exito = exito || insertOk; // si alguna inserción fue exitosa, exito = true
         }
 

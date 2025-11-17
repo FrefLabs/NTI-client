@@ -8,9 +8,9 @@ import java.text.DecimalFormat;
 import juego.PanelJuego;
 
 /**
- * (CLASE PRINCIPAL - CORREGIDA Y REFACTORIZADA)
- * Contiene el JFrame, la Sidebar original y el CardLayout.
- * La lógica de cada panel ha sido movida a su propia clase.
+ * (CLASE PRINCIPAL - CORREGIDA)
+ * El ActionListener de btnAjustes ahora llama a
+ * panelAjustes.cargarConfiguracionActual() CADA VEZ que se presiona.
  */
 public class NTI extends JFrame {
 
@@ -32,9 +32,12 @@ public class NTI extends JFrame {
     Lectura lectura;
     Modelo modelo;
     
+    public String estiloGraficaActual;
+
     // --- Paneles de Contenido (Refactorizados) ---
+    public PanelInicio panelInicio;
+    
     private PanelJuego panelJuego;
-    private PanelInicio panelInicio;
     private PanelModelos panelModelos;
     private PanelAjustes panelAjustes;
     private PanelHistorial panelHistorial; 
@@ -50,7 +53,6 @@ public class NTI extends JFrame {
     final DecimalFormat df8 = new DecimalFormat("0.00000000"); // (Para PanelModelos)
     final DecimalFormat df4 = new DecimalFormat("0.0000"); // (Para PanelModelos)
 
-
     public NTI() {
         setTitle("NeuroFref Trading Intelligence - 1.0");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -60,14 +62,34 @@ public class NTI extends JFrame {
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(fondo);
 
-        // --- 1. Inicializar Lógica (Como en tu original) ---
-        emp = new Empresa();
-        not = new Noticia();
+        // --- 1. Inicializar Lógica (CON NUEVO ORDEN DE CARGA) ---
+        
         ent = new Entorno();
         registro = new Registro();
-        accion = new Accion();
         lectura = new Lectura();
+        
+        String[] config = ent.conseguirConfig();
+        
+        int idModeloActual = 29; // Default
+        try {
+            idModeloActual = Integer.parseInt(config[3]);
+        } catch (NumberFormatException e) {
+            System.err.println("Error al leer IDModelo del config, usando default 29.");
+        }
+        
+        this.estiloGraficaActual = config[4];
+        
+        String simboloActual = lectura.obtenerSimboloPorIDModelo(idModeloActual);
+        System.out.println("Iniciando con Modelo ID: " + idModeloActual + " (Símbolo: " + simboloActual + ")");
+
+        accion = new Accion();
+        accion.simbolo = simboloActual; 
+        
         modelo = new Modelo(lectura);
+        modelo.setIDModeloSeleccionado(idModeloActual); 
+
+        emp = new Empresa();
+        not = new Noticia();
         
         // --- 2. Crear Sidebar (Tu código original) ---
         JPanel sidebar = crearPanelSidebar();
@@ -79,13 +101,11 @@ public class NTI extends JFrame {
         add(contentPanel, BorderLayout.CENTER);
 
         // --- 4. Instanciar Paneles Refactorizados ---
-        // (Pasamos 'this' (la instancia de NTI) para que accedan a la lógica)
         panelInicio = new PanelInicio(this);
         panelModelos = new PanelModelos(this);
-        panelAjustes = new PanelAjustes(this);
+        panelAjustes = new PanelAjustes(this); // (El constructor YA NO carga datos)
         panelHistorial = new PanelHistorial(this);
         
-        // (PanelJuego ya estaba limpio)
         panelJuego = new PanelJuego(registro, accion, lectura);
 
         // --- 5. Añadir Paneles al CardLayout ---
@@ -96,14 +116,15 @@ public class NTI extends JFrame {
         contentPanel.add(panelHistorial, "historial");
 
         // --- 6. Cargar datos iniciales y mostrar ---
-        panelInicio.cargarDatosIniciales();
+        panelInicio.cargarDatosIniciales(); 
         panelModelos.cargarDatosIniciales();
         
         setVisible(true);
     }
 
     /**
-     * (TU MÉTODO ORIGINAL) Crea la sidebar con botones de imagen.
+     * (MÉTODO CORREGIDO)
+     * El listener de 'btnAjustes' ahora llama a 'cargarConfiguracionActual'.
      */
     private JPanel crearPanelSidebar() {
         JPanel sidebar = new JPanel();
@@ -158,20 +179,18 @@ public class NTI extends JFrame {
         // --- Action Listeners (Tu código original) ---
         btnInicio.addActionListener(e -> {
             cardLayout.show(contentPanel, "inicio");
-            // (La recarga de datos ahora la maneja el panel si es necesario)
-            // panelInicio.cargarDatosIniciales(); (Opcional, si quieres recargar cada vez)
             panelJuego.onPanelOcultado();
         });
 
         btnModelos.addActionListener(e -> {
             cardLayout.show(contentPanel, "modelos");
-            panelModelos.mostrarListaYRecargar(); // (Llama al método de PanelModelos)
+            panelModelos.mostrarListaYRecargar();
             panelJuego.onPanelOcultado();
         });
         
         btnHistorial.addActionListener(e -> {
             cardLayout.show(contentPanel, "historial");
-            panelHistorial.cargarDatos(); // (Llama al método de PanelHistorial)
+            panelHistorial.cargarDatos(); 
             panelJuego.onPanelOcultado();
         });
 
@@ -180,10 +199,18 @@ public class NTI extends JFrame {
             panelJuego.onPanelMostrado();
         });
 
+        // --- (INICIO DE LA CORRECCIÓN) ---
         btnAjustes.addActionListener(e -> {
+            // 1. (LÍNEA NUEVA) Le dice al panel que lea el JSON
+            panelAjustes.cargarConfiguracionActual(); 
+            
+            // 2. Muestra el panel (ahora actualizado)
             cardLayout.show(contentPanel, "ajustes");
+            
+            // 3. Oculta el panel de juego
             panelJuego.onPanelOcultado();
         });
+        // --- (FIN DE LA CORRECCIÓN) ---
 
         return sidebar;
     }
@@ -217,18 +244,12 @@ public class NTI extends JFrame {
         return boton;
     }
 
-    /**
-     * (TU MÉTODO ORIGINAL) Helper para escalar el logo.
-     */
     private ImageIcon escalarImagen(ImageIcon iconoOriginal, int ancho, int alto) {
         Image imagenOriginal = iconoOriginal.getImage();
         Image imagenEscalada = imagenOriginal.getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
         return new ImageIcon(imagenEscalada);
     }
     
-    /**
-     * (TU MÉTODO ORIGINAL) Método Main.
-     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
