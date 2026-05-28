@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/img/Logo.png" alt="NTI Logo" width="60%">
+  <img src="src/img/NTI-LOGO-FINAL.png" alt="NTI Logo" width="60%">
 </p>
 
 <h1 align="center">N.T.I. - NeuroFref Trading Intelligence</h1>
@@ -60,5 +60,5 @@ Los valores, proyecciones y análisis generados por los modelos de redes neurona
 
 ---
 <p align="center">
-  Desarrollado con ❤️ por Fref Labs.
+  Desarrollado por Fref Labs.
 </p>
