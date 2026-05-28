@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Java-8-orange?style=for-the-badge&logo=java&logoColor=white" alt="Java 8">
   <img src="https://img.shields.io/badge/GUI-Swing-blue?style=for-the-badge&logo=java" alt="Swing">
   <img src="https://img.shields.io/badge/AI-Machine_Learning-gold?style=for-the-badge&logo=scikit-learn" alt="Machine Learning">
-  <img src="https://img.shields.io/badge/Status-Desarrollo-success?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/Status-Finalizado-success?style=for-the-badge" alt="Status">
 </p>
 
 ---
