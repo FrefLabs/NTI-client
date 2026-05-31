@@ -1,11 +1,13 @@
 package juego;
 
+import NTI.AudioManager;
 import NTI.Modelo;
 import NTI.Registro;
 import NTI.Accion;
 import NTI.Lectura;
-import NTI.RoundedBorder; // (Importar la clase de utilidad)
-import NTI.Formato;     // (Importar la clase de utilidad)
+import NTI.RoundedBorder;
+import NTI.Formato;
+import NTI.NTI;
 
 import java.awt.*;
 import javax.swing.*;
@@ -16,21 +18,33 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Vector;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import javax.sound.sampled.*;
+import java.net.URL;
 
-/**
- * (PanelJuego FINAL - CORREGIDO)
- * Este panel contiene toda la UI y lógica del juego.
- */
 public class PanelJuego extends JPanel {
 
     // --- Clases de Lógica ---
+    private NTI nti; 
     private Juego juego;
     private Modelo modelo;
     private Registro registro;
     private Accion accion;
     private Lectura lectura;
 
-    // --- Componentes de Navegación, Pantallas, Endless, TyA) ---
+    // --- Imagen de Fondo ---
+    private BufferedImage fondoIzquierdo;
+    private BufferedImage fondoDerecho;
+
+    // --- Clips de Audio ---
+    private Clip clipMenu;
+    private Clip clipJuego;
+    private Clip clipGanar;
+    private Clip clipPerder;
+
+    // --- Componentes ---
     private CardLayout layoutInterno;
     private JPanel panelInterno;
     private JButton btnAccionIzquierdo;
@@ -50,20 +64,14 @@ public class PanelJuego extends JPanel {
     private JLabel lblCierreManana;
     private JTextField txtPrediccion;
     private JButton btnConfirmarPrediccion;
-
-    // --- Timers ---
     private Timer timerEndless;
     private Timer timer;
     private Timer rankingTimer;
-
-    // --- Componentes del Ranking ---
     private JTextArea txtRankingTyA;
     private JTextArea txtRankingEndless;
-
-    // --- Estado de Timers ---
     private int tiempoRestanteEndless;
     private int tiempoRestante;
-
+    
     // --- Colores y Formato ---
     private final Color bordeDorado = Color.decode("#D4AF37");
     private final Color fondo = Color.decode("#030614");
@@ -72,25 +80,64 @@ public class PanelJuego extends JPanel {
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
     private final Dimension minBotonSize = new Dimension(140, 40);
 
-    public PanelJuego(Registro registro, Accion accion, Lectura lectura) {
+    // --- Nuevas Constantes de Juego ---
+    private final double INSTANT_LOSE_THRESHOLD = 0.25; // 25%
+    private final int BASE_ERROR_MULTIPLIER = 5000;
+
+    public PanelJuego(NTI nti, Registro registro, Accion accion, Lectura lectura) { 
+        this.nti = nti; 
         this.registro = registro;
         this.accion = accion;
         this.lectura = lectura;
         
-        juego = new Juego();
-        modelo = new Modelo(lectura); // (CORREGIDO: Pasar 'lectura')
+        juego = new Juego(lectura, registro);
+        modelo = new Modelo(lectura);
 
-        this.setLayout(new GridLayout(1, 2, 20, 0));
+        // --- Cargar y dividir la imagen de fondo ---
+        try {
+            BufferedImage originalImage = ImageIO.read(getClass().getResource("/img/fondo_juego.png"));
+            int width = originalImage.getWidth();
+            int height = originalImage.getHeight();
+            int midPoint = width / 2;
+            
+            this.fondoIzquierdo = originalImage.getSubimage(0, 0, midPoint, height);
+            this.fondoDerecho = originalImage.getSubimage(midPoint, 0, width - midPoint, height);
+
+        } catch (Exception e) {
+            System.err.println("Error al cargar la imagen de fondo: /img/fondo_juego.png");
+            e.printStackTrace();
+            this.fondoIzquierdo = null;
+            this.fondoDerecho = null;
+        }
+
+        // --- Cargar Audios ---
+        clipMenu = cargarSonido("menu.wav");
+        clipJuego = cargarSonido("juego.wav");
+        clipGanar = cargarSonido("ganar.wav");
+        clipPerder = cargarSonido("perder.wav");
+        
+        actualizarVolumenMusica();
+        
+        this.setLayout(new GridLayout(1, 2, 20, 0)); 
         this.setBackground(fondo);
-        this.setBorder(new EmptyBorder(30, 30, 30, 30));
+        this.setBorder(new EmptyBorder(20, 10, 20, 10));
         
-        JPanel panelJuegoIzquierda = crearPanelIzquierdaConFlujoInterno();
-        JPanel panelDerecho = crearPanelDerechoDividido();
-        
+        JPanel panelJuegoIzquierda = new PanelJuegoIzquierdo();
+        JPanel panelDerecho = new PanelJuegoDerecho();
+
+        panelJuegoIzquierda.setLayout(new BorderLayout());
+        panelDerecho.setLayout(new BorderLayout());
+
+        panelJuegoIzquierda.setOpaque(false);
+        panelDerecho.setOpaque(false);
+
+        panelJuegoIzquierda.add(crearPanelIzquierdaContenido(), BorderLayout.CENTER);
+        panelDerecho.add(crearPanelDerechoContenido(), BorderLayout.CENTER);
+
         this.add(panelJuegoIzquierda);
         this.add(panelDerecho);
     }
-
+    
     // -------------------------------------------------------------------
     // MÉTODOS DE CICLO DE VIDA (para el sistema grande)
     // -------------------------------------------------------------------
@@ -99,43 +146,129 @@ public class PanelJuego extends JPanel {
         if (rankingTimer != null && !rankingTimer.isRunning()) {
             rankingTimer.start();
         }
-        //Actualiza el ranking cada vez que se muestra el panel
         actualizarRankings();
+        reproducirSonido(clipMenu, true);
     }
 
     public void onPanelOcultado() {
         if (timer != null) timer.stop();
         if (timerEndless != null) timerEndless.stop();
         if (rankingTimer != null) rankingTimer.stop();
+        
+        pararTodosLosSonidos();
 
         layoutInterno.show(panelInterno, "inicio");
         btnAccionIzquierdo.setText("JUGAR");
         btnAccionDerecho.setVisible(false);
         panelBotonInferior.setVisible(true);
     }
+    
+    // -------------------------------------------------------------------
+    // MÉTODOS DE GESTIÓN DE AUDIO
+    // -------------------------------------------------------------------
+
+    public void actualizarVolumenMusica() {
+        int porcentaje = nti.ent.volumenMusica; 
+        setVolumen(clipMenu, porcentaje);
+        setVolumen(clipJuego, porcentaje);
+        setVolumen(clipGanar, porcentaje);
+        setVolumen(clipPerder, porcentaje);
+    }
+    
+    private void setVolumen(Clip clip, int porcentaje) {
+        if (clip == null) return;
+        
+        try {
+            FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+            float min = gainControl.getMinimum();
+            float max = gainControl.getMaximum();
+            float range = max - min;
+            
+            float gain;
+            if (porcentaje == 0) {
+                gain = min; // Silencio total
+            } else {
+                // Mapeo logarítmico
+                gain = (float) (min + (range * (Math.log10(1 + 9 * (porcentaje / 100.0)) / Math.log10(10.0))));
+            }
+            
+            if (gain < min) gain = min;
+            if (gain > max) gain = max;
+            
+            gainControl.setValue(gain);
+            
+        } catch (Exception e) {
+            System.err.println("No se pudo ajustar el volumen: " + e.getMessage());
+        }
+    }
+    
+    private Clip cargarSonido(String nombreArchivo) {
+        try {
+            URL url = getClass().getResource("/audios/" + nombreArchivo);
+            if (url == null) {
+                System.err.println("No se pudo encontrar el audio: /audios/" + nombreArchivo);
+                return null;
+            }
+            AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioIn);
+            return clip;
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            System.err.println("Error al cargar el audio " + nombreArchivo + ": " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    private void pararTodosLosSonidos() {
+        if (clipMenu != null && clipMenu.isRunning()) {
+            clipMenu.stop();
+        }
+        if (clipJuego != null && clipJuego.isRunning()) {
+            clipJuego.stop();
+        }
+    }
+
+    private void reproducirSonido(Clip clip, boolean loop) {
+        if (clip == null) return;
+        
+        if (loop) {
+            pararTodosLosSonidos();
+        }
+        
+        clip.setFramePosition(0); 
+        
+        if (loop) {
+            clip.loop(Clip.LOOP_CONTINUOUSLY);
+        } else {
+            clip.start(); 
+        }
+    }
 
     // -------------------------------
-    // PANEL DERECHO CON REGLAS Y RANKING
+    // PANEL DERECHO: REGLAS Y RANKING
     // -------------------------------
-    private JPanel crearPanelDerechoDividido() {
+    private JPanel crearPanelDerechoContenido() {
         JPanel panelDerecho = new JPanel(new GridBagLayout());
-        panelDerecho.setOpaque(false);
+        panelDerecho.setOpaque(false); 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
         
-        JPanel panelReglas = crearPanelReglas();
-        JPanel panelRanking = crearPanelRanking();
-        panelReglas.setPreferredSize(new Dimension(0, 0));
+        JPanel panelReglasPlaceholder = new JPanel();
+        panelReglasPlaceholder.setOpaque(false);
+
+        JPanel panelRanking = crearPanelRanking(); 
+        panelReglasPlaceholder.setPreferredSize(new Dimension(0, 0));
         panelRanking.setPreferredSize(new Dimension(0, 0));
 
         gbc.gridy = 0;
-        gbc.weighty = 0.66;
-        gbc.insets = new Insets(0, 0, 20, 0);
-        panelDerecho.add(panelReglas, gbc);
+        gbc.weighty = 0.70; 
+        gbc.insets = new Insets(0, 0, 0, 0); 
+        panelDerecho.add(panelReglasPlaceholder, gbc);
 
         gbc.gridy = 1;
-        gbc.weighty = 0.33;
+        gbc.weighty = 0.30; 
         gbc.insets = new Insets(0, 0, 0, 0);
         panelDerecho.add(panelRanking, gbc);
 
@@ -145,34 +278,24 @@ public class PanelJuego extends JPanel {
     // -------------------------------
     // PANEL IZQUIERDO CON FLUJO INTERNO
     // -------------------------------
-    private JPanel crearPanelIzquierdaConFlujoInterno() {
+    private JPanel crearPanelIzquierdaContenido() {
         JPanel panelContenedor = new JPanel(new BorderLayout());
-        panelContenedor.setBackground(fondoPanel);
-        
-        // (CORREGIDO) Usa la clase 'RoundedBorder' importada
-        Border bordeRedondeado = new RoundedBorder(25, bordeDorado, 2);
-        Border padding = new EmptyBorder(10, 10, 10, 10);
-        panelContenedor.setBorder(new CompoundBorder(bordeRedondeado, padding));
-
-        // --- Panel de Título (Fijo) ---
-        JPanel panelTitulo = new JPanel();
-        panelTitulo.setBackground(fondoPanel);
-        JLabel lblTitulo = new JLabel("N.T.I - No Tengo Idea", SwingConstants.CENTER);
-        lblTitulo.setForeground(bordeDorado);
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblTitulo.setBorder(new EmptyBorder(10, 0, 10, 0));
-        panelTitulo.add(lblTitulo);
+        panelContenedor.setOpaque(false); 
 
         // --- Panel Central (CardLayout) ---
         this.layoutInterno = new CardLayout();
         this.panelInterno = new JPanel(layoutInterno);
-        panelInterno.setBackground(fondoPanel);
+        panelInterno.setOpaque(false); 
+        panelInterno.setBorder(new EmptyBorder(160, 60, 100, 60));
 
         JPanel pantallaInicio = new JPanel(new BorderLayout());
-        pantallaInicio.setBackground(fondoPanel);
+        pantallaInicio.setOpaque(false); 
 
         JPanel pantallaNombre = new JPanel(new GridBagLayout());
-        pantallaNombre.setBackground(fondoPanel);
+        pantallaNombre.setBackground(fondoPanel); 
+        pantallaNombre.setOpaque(true);
+        pantallaNombre.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
         JLabel lblPideNombre = new JLabel("Ingrese su nombre:");
         lblPideNombre.setForeground(letra);
         lblPideNombre.setFont(new Font("Arial", Font.BOLD, 16));
@@ -181,9 +304,14 @@ public class PanelJuego extends JPanel {
         txtNombre.setForeground(letra);
         txtNombre.setCaretColor(letra);
         txtNombre.setBorder(BorderFactory.createLineBorder(bordeDorado));
+        
         JButton btnContinuar = new JButton("Continuar");
-        btnContinuar.setBackground(bordeDorado);
-        btnContinuar.setForeground(fondo);
+        btnContinuar.setBackground(fondoPanel);
+        btnContinuar.setForeground(letra);
+        btnContinuar.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+        // Añadir cursor de mano
+        btnContinuar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
         this.lblError = new JLabel("");
         lblError.setForeground(Color.RED);
         
@@ -195,17 +323,23 @@ public class PanelJuego extends JPanel {
         gbc.gridy = 3; pantallaNombre.add(lblError, gbc);
 
         JPanel pantallaModo = new JPanel(new GridBagLayout());
-        pantallaModo.setBackground(fondoPanel);
+        pantallaModo.setBackground(fondoPanel); 
+        pantallaModo.setOpaque(true);
+        pantallaModo.setBorder(new EmptyBorder(10, 10, 10, 10));
+
         JLabel lblModo = new JLabel("Seleccione el modo de juego:");
         lblModo.setForeground(letra);
         lblModo.setFont(new Font("Arial", Font.BOLD, 16));
         JButton btnNormal = new JButton("Tira Y Afloje");
         JButton btnEndless = new JButton("Endless");
         for (JButton b : new JButton[]{btnNormal, btnEndless}) {
-            b.setBackground(bordeDorado);
-            b.setForeground(fondo);
+            b.setBackground(fondoPanel);
+            b.setForeground(letra);
             b.setFocusPainted(false);
             b.setFont(new Font("Arial", Font.BOLD, 14));
+            b.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+            // Añadir cursor de mano
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         }
         Dimension sizeNormal = btnNormal.getPreferredSize();
         Dimension sizeEndless = btnEndless.getPreferredSize();
@@ -223,34 +357,44 @@ public class PanelJuego extends JPanel {
         pantallaModo.add(btnEndless, gbc);
 
         this.pantallaJuegoNormal = crearPantallaJuegoNormal();
-        this.pantallaJuegoEndless = crearPantallaJuegoEndless(); // (Llama al método de la Parte 2)
+        this.pantallaJuegoEndless = crearPantallaJuegoEndless(); 
 
         // --- Panel de Botón Inferior ---
         this.panelBotonInferior = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
-        panelBotonInferior.setBackground(fondoPanel);
+        panelBotonInferior.setOpaque(false); 
+        panelBotonInferior.setBorder(new EmptyBorder(0, 0, 80, 0)); 
         
         this.btnAccionIzquierdo = new JButton("JUGAR");
-        btnAccionIzquierdo.setBackground(bordeDorado);
-        btnAccionIzquierdo.setForeground(fondo);
+        btnAccionIzquierdo.setBackground(fondoPanel);
+        btnAccionIzquierdo.setForeground(letra);
         btnAccionIzquierdo.setFont(new Font("Arial", Font.BOLD, 16));
         btnAccionIzquierdo.setPreferredSize(minBotonSize);
+        btnAccionIzquierdo.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+        // (NUEVO) Añadir cursor de mano
+        btnAccionIzquierdo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         panelBotonInferior.add(btnAccionIzquierdo);
         
         this.btnAccionDerecho = new JButton("Salir");
-        btnAccionDerecho.setBackground(bordeDorado);
-        btnAccionDerecho.setForeground(fondo);
+        btnAccionDerecho.setBackground(fondoPanel);
+        btnAccionDerecho.setForeground(letra);
         btnAccionDerecho.setFont(new Font("Arial", Font.BOLD, 16));
         btnAccionDerecho.setPreferredSize(minBotonSize);
+        btnAccionDerecho.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+        // Añadir cursor de mano
+        btnAccionDerecho.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         panelBotonInferior.add(btnAccionDerecho);
         
         btnAccionDerecho.setVisible(false);
         panelBotonInferior.setVisible(true);
 
-        // --- Acciones de Botones ---
-        
+        // --- Acciones de Botones (Lógica sin cambios) ---
+        btnContinuar.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnContinuar.addActionListener(e -> {
             String nombre = txtNombre.getText().trim();
-            // (CORREGIDO) Usa la clase 'Formato' importada
             if (Formato.validarNombre(nombre)) {
                 juego.ingresarNombre(nombre);
                 juego.setPuntos();
@@ -262,39 +406,51 @@ public class PanelJuego extends JPanel {
                 lblError.setText("Nombre inválido (solo letras, 3-10 caracteres)");
             }
         });
-
+        btnNormal.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnNormal.addActionListener(e -> {
+            reproducirSonido(clipJuego, true);
             juego.ingresarModo("Tira Y Afloje");
             juego.setPuntos();
-            iniciarNuevaRonda(); // (Llama al método de la Parte 2)
+            iniciarNuevaRonda(); 
             layoutInterno.show(panelInterno, "juegoNormal");
             btnAccionIzquierdo.setText("Reiniciar");
             btnAccionDerecho.setText("Salir");
             btnAccionDerecho.setVisible(true);
-            igualarTamañoBotonesMin(btnAccionIzquierdo, btnAccionDerecho);
+            
         });
-
+        btnEndless.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnEndless.addActionListener(e -> {
+            reproducirSonido(clipJuego, true);
             juego.ingresarModo("Endless");
             juego.setPuntos();
-            iniciarNuevaRondaEndless(); // (Llama al método de la Parte 2)
+            iniciarNuevaRondaEndless(); 
             layoutInterno.show(panelInterno, "juegoEndless");
             btnAccionIzquierdo.setText("Reiniciar");
             btnAccionDerecho.setText("Salir");
             btnAccionDerecho.setVisible(true);
-            igualarTamañoBotonesMin(btnAccionIzquierdo, btnAccionDerecho);
+            
         });
-        
+        btnAccionIzquierdo.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnAccionIzquierdo.addActionListener(e -> {
             String textoBoton = btnAccionIzquierdo.getText();
-            
             switch (textoBoton) {
                 case "JUGAR":
                     layoutInterno.show(panelInterno, "nombre");
                     btnAccionIzquierdo.setText("Volver Atras");
                     btnAccionDerecho.setVisible(false);
                     break;
-                    
                 case "Volver Atras":
                     Component visibleComponent = null;
                     for (Component comp : panelInterno.getComponents()) {
@@ -309,11 +465,12 @@ public class PanelJuego extends JPanel {
                         layoutInterno.show(panelInterno, "inicio");
                         btnAccionIzquierdo.setText("JUGAR");
                         btnAccionDerecho.setVisible(false);
+                        reproducirSonido(clipMenu, true);
                     }
                     break;
-                    
                 case "Reiniciar":
-                    if (juego.getModoJuego().equals("Tira Y Afloje")) { // Corregido
+                    reproducirSonido(clipJuego, true);
+                    if (juego.getModoJuego().equals("Tira Y Afloje")) { 
                         if (timer != null) timer.stop();
                         juego.setPuntos();
                         iniciarNuevaRonda();
@@ -324,43 +481,42 @@ public class PanelJuego extends JPanel {
                         btnAccionIzquierdo.setText("Reiniciar");
                     }
                     break;
-                    
                 case "Retirarse":
+                    pararTodosLosSonidos();
+                    reproducirSonido(clipGanar, false);
                     if (timerEndless != null) timerEndless.stop();
-                    
-                    registro.guardarPartida(
-                        juego.getNombreJugador(),
-                        juego.getPuntosJugador(),
-                        juego.getRondaActual(),
-                        new java.util.Date(),
-                        juego.getModoJuego(),
-                        accion.simbolo
-                    );
-
+                    juego.guardarPartida(accion.simbolo);
                     JOptionPane.showMessageDialog(this,
                         "¡Felicidades! Te retiras con " + juego.getPuntosJugador() + " puntos.",
                         "Partida Finalizada", JOptionPane.INFORMATION_MESSAGE);
-                    
                     layoutInterno.show(panelInterno, "inicio");
                     txtNombre.setText("");
                     lblError.setText("");
                     btnAccionIzquierdo.setText("JUGAR");
                     btnAccionDerecho.setVisible(false);
+                    reproducirSonido(clipMenu, true); // Reinicia música de menú
                     break;
             }
-            igualarTamañoBotonesMin(btnAccionIzquierdo, btnAccionDerecho);
+            
         });
-
+        btnAccionDerecho.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnAccionDerecho.addActionListener(e -> {
+            pararTodosLosSonidos();
+            reproducirSonido(clipMenu, true);
             if (juego.getModoJuego().equals("Tira Y Afloje")) {
                 if (timer != null) timer.stop();
-            } else {
+            }
+            else {
                 if (timerEndless != null) timerEndless.stop();
             }
             layoutInterno.show(panelInterno, "modo");
             btnAccionIzquierdo.setText("Volver Atras");
             btnAccionDerecho.setVisible(false);
-            igualarTamañoBotonesMin(btnAccionIzquierdo, btnAccionDerecho);
+            
         });
 
         panelInterno.add(pantallaInicio, "inicio");
@@ -369,119 +525,52 @@ public class PanelJuego extends JPanel {
         panelInterno.add(pantallaJuegoNormal, "juegoNormal");
         panelInterno.add(pantallaJuegoEndless, "juegoEndless");
         layoutInterno.show(panelInterno, "inicio");
-        panelContenedor.add(panelTitulo, BorderLayout.NORTH);
+        
         panelContenedor.add(panelInterno, BorderLayout.CENTER);
         panelContenedor.add(panelBotonInferior, BorderLayout.SOUTH);
+
         return panelContenedor;
     }
-
+    
     // -------------------------------
-    // PANEL DERECHO: REGLAS
-    // -------------------------------
-    private JPanel crearPanelReglas() {
-        JPanel panelReglas = new JPanel(new BorderLayout());
-        panelReglas.setBackground(fondoPanel);
-        // (CORREGIDO) Usa la clase 'RoundedBorder' importada
-        Border bordeRedondeado = new RoundedBorder(25, bordeDorado, 2);
-        panelReglas.setBorder(bordeRedondeado);
-        JLabel lblTituloReglas = new JLabel("¿CÓMO SE JUEGA?", SwingConstants.CENTER);
-        lblTituloReglas.setFont(new Font("Arial", Font.BOLD, 18));
-        lblTituloReglas.setForeground(letra);
-        lblTituloReglas.setBorder(new EmptyBorder(20, 20, 10, 20));
-        JTextArea txtReglas = new JTextArea();
-        txtReglas.setEditable(false);
-        txtReglas.setWrapStyleWord(true);
-        txtReglas.setLineWrap(true);
-        txtReglas.setForeground(letra);
-        txtReglas.setBackground(fondoPanel);
-        txtReglas.setFont(new Font("Arial", Font.PLAIN, 14));
-        txtReglas.setText(
-                "El puntaje se mide en centavos ($0.01 = 1 punto).\n\n"
-                + "Tu objetivo es predecir el CIERRE de HOY.\n\n"
-                + "PISTAS:\n"
-                + "• Datos de AYER (Cierre, Alto, Bajo, Volumen)\n"
-                + "• Datos de HOY (Open)\n"
-                + "• Datos de MAÑANA (Cierre)\n\n"
-                + "MODO TIRA Y AFLOJE (vs IA):\n"
-                + "Ambos empiezan con 1000 puntos. Ganas el error de la IA, o pierdes tu propio error.\n"
-                + "Pierdes si llegas a 0 puntos.\n"
-                + "Bonus por dirección: +10 puntos.\n\n"
-                + "MODO ENDLESS (Arcade):\n"
-                + "Empiezas con 1000 puntos. La IA juega como referencia.\n"
-                + "Ganas o pierdes puntos según la lógica de Tira y Afloje.\n"
-                + "¡Pierdes automáticamente si tu puntaje llega a 0!\n"
-                + "Bonus por dirección: +10 puntos.\n"
-                + "Si superas los 1000 puntos puedes 'Retirarte'. Si no, puedes 'Reiniciar'."
-        );
-        txtReglas.setCaretPosition(0);
-        JScrollPane scroll = new JScrollPane(txtReglas);
-        scroll.setBorder(new EmptyBorder(0, 15, 15, 15));
-        scroll.setOpaque(false);
-        scroll.getViewport().setOpaque(false);
-        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        panelReglas.add(lblTituloReglas, BorderLayout.NORTH);
-        panelReglas.add(scroll, BorderLayout.CENTER);
-        return panelReglas;
-    }
-
-    // -------------------------------
-    // PANEL DERECHO: RANKING (MODIFICADO)
+    // PANEL DERECHO: RANKING
     // -------------------------------
     private JPanel crearPanelRanking() {
         JPanel panelRanking = new JPanel(new BorderLayout());
-        panelRanking.setBackground(fondoPanel);
-        
-        // (CORREGIDO) Usa la clase 'RoundedBorder' importada
-        Border bordeRedondeado = new RoundedBorder(25, bordeDorado, 2);
-        Border padding = new EmptyBorder(10, 15, 10, 15);
-        panelRanking.setBorder(new CompoundBorder(bordeRedondeado, padding));
-
-        JLabel lblTituloRanking = new JLabel("RANKING", SwingConstants.CENTER);
-        lblTituloRanking.setFont(new Font("Arial", Font.BOLD, 18));
-        lblTituloRanking.setForeground(letra);
-        lblTituloRanking.setBorder(new EmptyBorder(10, 0, 10, 0));
-        panelRanking.add(lblTituloRanking, BorderLayout.NORTH);
-
+        panelRanking.setOpaque(false); 
+        panelRanking.setBorder(new EmptyBorder(20, 30, 0, 30)); 
         CardLayout rankingLayout = new CardLayout();
         JPanel panelTarjetas = new JPanel(rankingLayout);
         panelTarjetas.setOpaque(false);
-
         this.txtRankingTyA = new JTextArea(" -----------------------------------\n  (Cargando Ranking...)");
         this.txtRankingEndless = new JTextArea(" -----------------------------------\n  (Cargando Ranking...)");
-
         JPanel tarjetaTyA = crearTarjetaRanking("MODO TIRA Y AFLOJE (Menos Rondas)", txtRankingTyA);
         JPanel tarjetaEndless = crearTarjetaRanking("MODO ENDLESS (Más Puntaje)", txtRankingEndless);
-
+        tarjetaTyA.setOpaque(false);
+        tarjetaEndless.setOpaque(false);
         panelTarjetas.add(tarjetaTyA, "TyA");
         panelTarjetas.add(tarjetaEndless, "Endless");
         panelRanking.add(panelTarjetas, BorderLayout.CENTER);
-
         this.rankingTimer = new Timer(15000, e -> {
             rankingLayout.next(panelTarjetas);
         });
         this.rankingTimer.setInitialDelay(15000);
-
         return panelRanking;
     }
 
-    // -------------------------------
-    // MÉTODO HELPER PARA CREAR TARJETA RANKING
-    // -------------------------------
     private JPanel crearTarjetaRanking(String titulo, JTextArea txtRanking) {
         JPanel tarjeta = new JPanel(new BorderLayout());
-        tarjeta.setOpaque(false);
+        tarjeta.setOpaque(false); 
         JLabel lblSubtitulo = new JLabel(titulo, SwingConstants.CENTER);
         lblSubtitulo.setFont(new Font("Arial", Font.BOLD, 14));
         lblSubtitulo.setForeground(bordeDorado);
         lblSubtitulo.setBorder(new EmptyBorder(5, 10, 5, 10));
         tarjeta.add(lblSubtitulo, BorderLayout.NORTH);
-        
         txtRanking.setEditable(false);
         txtRanking.setForeground(letra);
         txtRanking.setOpaque(false);
         txtRanking.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        txtRanking.setBorder(new EmptyBorder(0, 15, 15, 15));
+        txtRanking.setBorder(new EmptyBorder(15, 15, 15, 15));
         tarjeta.add(txtRanking, BorderLayout.CENTER);
         return tarjeta;
     }
@@ -492,11 +581,16 @@ public class PanelJuego extends JPanel {
     private void actualizarRankings() {
         txtRankingTyA.setText("Actualizando...");
         txtRankingEndless.setText("Actualizando...");
-
         new Thread(() -> {
             Map<String, Vector<String[]>> rankings = lectura.obtenerRankings();
-            
-            // --- Formatear datos de Endless ---
+            if (rankings == null) {
+                String errorText = "Error al cargar rankings: Servidor falló.";
+                SwingUtilities.invokeLater(() -> {
+                    txtRankingEndless.setText(errorText);
+                    txtRankingTyA.setText(errorText);
+                });
+                return;
+            }
             Vector<String[]> endlessData = rankings.get("Endless");
             String endlessText;
             if (endlessData != null && !endlessData.isEmpty()) {
@@ -510,8 +604,6 @@ public class PanelJuego extends JPanel {
             } else {
                 endlessText = "No hay datos de ranking.\n";
             }
-            
-            // --- Formatear datos de Tira y Afloje ---
             Vector<String[]> tyaData = rankings.get("TyA");
             String tyaText;
             if (tyaData != null && !tyaData.isEmpty()) {
@@ -525,13 +617,10 @@ public class PanelJuego extends JPanel {
             } else {
                 tyaText = "No hay datos de ranking.\n";
             }
-
-            // --- Actualizar la GUI en el hilo principal ---
             SwingUtilities.invokeLater(() -> {
                 txtRankingEndless.setText(endlessText);
                 txtRankingTyA.setText(tyaText);
             });
-            
         }).start();
     }
 
@@ -542,6 +631,9 @@ public class PanelJuego extends JPanel {
     private JPanel crearPantallaJuegoNormal() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(fondoPanel);
+        panel.setOpaque(true); 
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 10, 8, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -600,14 +692,22 @@ public class PanelJuego extends JPanel {
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.LINE_START;
         gbc.insets = new Insets(20, 5, 20, 10);
         panel.add(txtPrediccion, gbc);
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(0, 10, 8, 10);
         btnConfirmarPrediccion = new JButton("Confirmar");
-        btnConfirmarPrediccion.setBackground(bordeDorado);
-        btnConfirmarPrediccion.setForeground(fondo);
+        btnConfirmarPrediccion.setBackground(fondoPanel);
+        btnConfirmarPrediccion.setForeground(letra);
+        btnConfirmarPrediccion.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+        // Añadir cursor de mano
+        btnConfirmarPrediccion.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         gbc.gridy = 8; gbc.gridx = 0; gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
         panel.add(btnConfirmarPrediccion, gbc);
+        btnConfirmarPrediccion.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnConfirmarPrediccion.addActionListener(e -> {
             if (timer.isRunning()) {
                 procesarRonda();
@@ -630,8 +730,11 @@ public class PanelJuego extends JPanel {
     private JPanel crearPantallaJuegoEndless() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(fondoPanel);
+        panel.setOpaque(true); 
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(8, 10, 5, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         lblRondaEndless = new JLabel("Ronda: 1");
         lblRondaEndless.setForeground(letra);
@@ -669,7 +772,7 @@ public class PanelJuego extends JPanel {
         lblVolumenAyerEndless = new JLabel("Volumen Ayer: 5,123,456");
         lblVolumenAyerEndless.setForeground(letra);
         gbc.gridx = 1; panel.add(lblVolumenAyerEndless, gbc);
-        lblAltoAyerEndless = new JLabel("Alto Ayer: $152.10");
+        lblAltoAyerEndless = new JLabel("Altoayer: $152.10");
         lblAltoAyerEndless.setForeground(letra);
         gbc.gridy = 6; gbc.gridx = 0; panel.add(lblAltoAyerEndless, gbc);
         lblBajoAyerEndless = new JLabel("Bajo Ayer: $148.50");
@@ -678,7 +781,7 @@ public class PanelJuego extends JPanel {
         JLabel lblTuPrediccion = new JLabel("Tu Predicción (Cierre Hoy):");
         lblTuPrediccion.setForeground(bordeDorado);
         gbc.gridy = 7; gbc.gridx = 0; gbc.anchor = GridBagConstraints.LINE_END;
-        gbc.insets = new Insets(20, 10, 20, 5);
+        gbc.insets = new Insets(20, 10, 15, 5);
         panel.add(lblTuPrediccion, gbc);
         txtPrediccionEndless = new JTextField(10);
         txtPrediccionEndless.setBackground(fondo);
@@ -686,16 +789,24 @@ public class PanelJuego extends JPanel {
         txtPrediccionEndless.setCaretColor(letra);
         txtPrediccionEndless.setBorder(BorderFactory.createLineBorder(bordeDorado));
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.LINE_START;
-        gbc.insets = new Insets(20, 5, 20, 10);
+        gbc.insets = new Insets(20, 5, 15, 10);
         panel.add(txtPrediccionEndless, gbc);
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(0, 10, 5, 10);
         btnConfirmarPrediccionEndless = new JButton("Confirmar");
-        btnConfirmarPrediccionEndless.setBackground(bordeDorado);
-        btnConfirmarPrediccionEndless.setForeground(fondo);
+        btnConfirmarPrediccionEndless.setBackground(fondoPanel);
+        btnConfirmarPrediccionEndless.setForeground(letra);
+        btnConfirmarPrediccionEndless.setBorder(BorderFactory.createCompoundBorder(new RoundedBorder(20, bordeDorado, 2), new EmptyBorder(5, 10, 5, 10)));
+        // Añadir cursor de mano
+        btnConfirmarPrediccionEndless.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         gbc.gridy = 8; gbc.gridx = 0; gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
         panel.add(btnConfirmarPrediccionEndless, gbc);
+        btnConfirmarPrediccionEndless.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnConfirmarPrediccionEndless.addActionListener(e -> {
             if (timerEndless.isRunning()) {
                 procesarRondaEndless();
@@ -713,10 +824,20 @@ public class PanelJuego extends JPanel {
 
 
     // -------------------------------
-    // LÓGICA DE JUEGO (TIRA Y AFLOJE)
+    // LÓGICA DE JUEGO (TIRA Y AFLOJE) (sin cambios)
     // -------------------------------
     private void iniciarNuevaRonda() {
-        juego.generarNuevaRonda();
+        String simboloParaJuego = (this.accion.simbolo == null) ? "KO" : this.accion.simbolo;
+        boolean exito = juego.generarNuevaRonda(simboloParaJuego);
+        if (!exito) {
+            if (timer != null) timer.stop();
+            JOptionPane.showMessageDialog(this, "No se pudieron cargar los datos para la nueva ronda.\nInténtalo de nuevo más tarde.", "Error de Red", JOptionPane.ERROR_MESSAGE);
+            layoutInterno.show(panelInterno, "modo"); // Go back to mode selection
+            btnAccionIzquierdo.setText("Volver Atras");
+            btnAccionDerecho.setVisible(false);
+            return;
+        }
+        
         actualizarLabelsDatos();
         int ronda = juego.getRondaActual();
         if (ronda >= 15) { this.tiempoRestante = 10; }
@@ -735,16 +856,51 @@ public class PanelJuego extends JPanel {
         timer.stop();
         btnConfirmarPrediccion.setEnabled(false);
         txtPrediccion.setEnabled(false);
+
         double prediccionJugador;
-        try { prediccionJugador = Double.parseDouble(txtPrediccion.getText().replace(",", ".")); }
-        catch (NumberFormatException e) { prediccionJugador = 0.0; }
-        double prediccionIA = modelo.hacerPrediccion(juego.getCierreAyer(), juego.getCierreManana());
+        try { 
+            prediccionJugador = Double.parseDouble(txtPrediccion.getText().replace(",", ".")); 
+        } catch (NumberFormatException e) { 
+            prediccionJugador = 0.0; 
+        } 
+        
         double cierreHoy = juego.getCierreHoy();
-        int errorJugador = (int) (Math.abs(prediccionJugador - cierreHoy) * 100);
-        int errorIA = (int) (Math.abs(prediccionIA - cierreHoy) * 100);
+        
+        // Comprobación de Derrota Instantánea
+        double porcentajeErrorJugador = (Math.abs(prediccionJugador - cierreHoy) / cierreHoy);
+        if (porcentajeErrorJugador > INSTANT_LOSE_THRESHOLD) {
+            juego.forzarDerrota();
+            pararTodosLosSonidos();
+            reproducirSonido(clipPerder, false);
+            JOptionPane.showMessageDialog(this, 
+                String.format("¡DERROTA INSTANTÁNEA!\n\nTu predicción ($%.2f) se desvió más de un %.0f%% del precio real ($%.2f).\nLa precisión es clave.", 
+                prediccionJugador, INSTANT_LOSE_THRESHOLD * 100, cierreHoy), 
+                "Fin del Juego", 
+                JOptionPane.ERROR_MESSAGE);
+            
+            // Volver al menú
+            layoutInterno.show(panelInterno, "inicio");
+            txtNombre.setText("");
+            lblError.setText("");
+            btnAccionIzquierdo.setText("JUGAR");
+            btnAccionDerecho.setVisible(false);
+            panelBotonInferior.setVisible(true); 
+            reproducirSonido(clipMenu, true);
+            return; // Termina el método aquí
+        }
+
+        // Cálculo de Puntos de Error Porcentual
+        double prediccionIA = modelo.hacerPrediccion(juego.getCierreAyer(), juego.getCierreManana());
+        double porcentajeErrorIA = (Math.abs(prediccionIA - cierreHoy) / cierreHoy);
+
+        int errorJugador = (int) (porcentajeErrorJugador * BASE_ERROR_MULTIPLIER);
+        int errorIA = (int) (porcentajeErrorIA * BASE_ERROR_MULTIPLIER);
+
+        // Procesar resultado con la lógica de Juego
         String resumenRonda = juego.calcularResultadoRonda(errorJugador, errorIA, prediccionJugador);
         lblPuntosJugador.setText("Tus Puntos: " + juego.getPuntosJugador());
         lblPuntosIA.setText("Puntos IA: " + juego.getPuntosIA());
+
         String mensaje = String.format(
                 "--- RONDA %d FINALIZADA ---\n\n" +
                 "El Precio de Cierre de HOY fue: %s\n\n" +
@@ -758,21 +914,20 @@ public class PanelJuego extends JPanel {
                 resumenRonda
         );
         JOptionPane.showMessageDialog(this, mensaje, "Fin de Ronda", JOptionPane.INFORMATION_MESSAGE);
+        
+        // Comprobar fin de juego normal
         if (juego.isJuegoTerminado()) {
+            pararTodosLosSonidos();
             String ganadorFinal = juego.getGanadorFinal();
             String mensajeFinal;
             if (ganadorFinal.equals(juego.getNombreJugador())) {
                 mensajeFinal = "¡FELICIDADES, GANASTE!\nHas dejado a la IA en 0 puntos.";
-                registro.guardarPartida(
-                    juego.getNombreJugador(),
-                    juego.getPuntosJugador(),
-                    juego.getRondaActual(),
-                    new java.util.Date(),
-                    juego.getModoJuego(),
-                    accion.simbolo
-                );
+                reproducirSonido(clipGanar, false);
+                juego.guardarPartida(accion.simbolo);
             } else {
                 mensajeFinal = "¡OH NO, PERDISTE!\nLa IA te ha quitado todos tus puntos.";
+                reproducirSonido(clipPerder, false);
+                juego.guardarPartida(accion.simbolo);
             }
             JOptionPane.showMessageDialog(this, mensajeFinal, "Fin del Juego", JOptionPane.INFORMATION_MESSAGE);
             layoutInterno.show(panelInterno, "inicio");
@@ -780,6 +935,8 @@ public class PanelJuego extends JPanel {
             lblError.setText("");
             btnAccionIzquierdo.setText("JUGAR");
             btnAccionDerecho.setVisible(false);
+            panelBotonInferior.setVisible(true); 
+            reproducirSonido(clipMenu, true);
         } else {
             iniciarNuevaRonda();
         }
@@ -795,17 +952,26 @@ public class PanelJuego extends JPanel {
         lblCierreManana.setText("Cierre Mañana: " + currencyFormat.format(juego.getCierreManana()));
         lblOpenHoy.setText("Open Hoy: " + currencyFormat.format(juego.getOpenHoy()));
         lblVolumenAyer.setText("Volumen Ayer: " + volumeFormat.format(juego.getVolumenAyer()));
-        lblAltoAyer.setText("Alto Ayer: " + currencyFormat.format(juego.getAltoAyer()));
+        lblAltoAyer.setText("Altoayer: " + currencyFormat.format(juego.getAltoAyer()));
         lblBajoAyer.setText("Bajo Ayer: " + currencyFormat.format(juego.getBajoAyer()));
     }
 
 
     // -------------------------------
-    // LÓGICA DE JUEGO (ENDLESS)
+    // LÓGICA DE JUEGO (ENDLESS) (sin cambios)
     // -------------------------------
-
     private void iniciarNuevaRondaEndless() {
-        juego.generarNuevaRonda();
+        String simboloParaJuego = (this.accion.simbolo == null) ? "KO" : this.accion.simbolo;
+        boolean exito = juego.generarNuevaRonda(simboloParaJuego);
+        if (!exito) {
+            if (timerEndless != null) timerEndless.stop();
+            JOptionPane.showMessageDialog(this, "No se pudieron cargar los datos para la nueva ronda.\nInténtalo de nuevo más tarde.", "Error de Red", JOptionPane.ERROR_MESSAGE);
+            layoutInterno.show(panelInterno, "modo"); // Go back to mode selection
+            btnAccionIzquierdo.setText("Volver Atras");
+            btnAccionDerecho.setVisible(false);
+            return;
+        }
+
         actualizarLabelsDatosEndless();
         int ronda = juego.getRondaActual();
         if (ronda >= 15) { this.tiempoRestanteEndless = 10; }
@@ -824,51 +990,81 @@ public class PanelJuego extends JPanel {
         timerEndless.stop();
         btnConfirmarPrediccionEndless.setEnabled(false);
         txtPrediccionEndless.setEnabled(false);
+        
         double prediccionJugador;
-        try { prediccionJugador = Double.parseDouble(txtPrediccionEndless.getText().replace(",", ".")); }
-        catch (NumberFormatException e) { prediccionJugador = 0.0; }
-        double prediccionIA = modelo.hacerPrediccion(juego.getCierreAyer(), juego.getCierreManana());
+        try { 
+            prediccionJugador = Double.parseDouble(txtPrediccionEndless.getText().replace(",", ".")); 
+        } catch (NumberFormatException e) { 
+            prediccionJugador = 0.0; 
+        }
+
         double cierreHoy = juego.getCierreHoy();
-        int errorJugador = (int) (Math.abs(prediccionJugador - cierreHoy) * 100);
-        int errorIA = (int) (Math.abs(prediccionIA - cierreHoy) * 100);
-        String resumenRonda = juego.calcularResultadoEndless(errorJugador, errorIA, prediccionJugador);
-        lblPuntosJugadorEndless.setText("Tus Puntos: " + juego.getPuntosJugador());
-        lblErrorIAEndless.setText("Error IA: " + errorIA);
-        if (juego.getPuntosJugador() <= 0) {
-            JOptionPane.showMessageDialog(this,
-                "¡GAME OVER!\nTe has quedado sin puntos.",
-                "Fin del Juego", JOptionPane.INFORMATION_MESSAGE);
+
+        // Comprobación de Derrota Instantánea
+        double porcentajeErrorJugador = (Math.abs(prediccionJugador - cierreHoy) / cierreHoy);
+        if (porcentajeErrorJugador > INSTANT_LOSE_THRESHOLD) {
+            juego.forzarDerrota();
+            pararTodosLosSonidos();
+            reproducirSonido(clipPerder, false);
+            JOptionPane.showMessageDialog(this, 
+                String.format("¡DERROTA INSTANTÁNEA!\n\nTu predicción ($%.2f) se desvió más de un %.0f%% del precio real ($%.2f).\nLa partida ha terminado.", 
+                prediccionJugador, INSTANT_LOSE_THRESHOLD * 100, cierreHoy), 
+                "Fin del Juego", 
+                JOptionPane.ERROR_MESSAGE);
+            
+            // Guardar partida y volver al menú
+            juego.guardarPartida(accion.simbolo);
             layoutInterno.show(panelInterno, "inicio");
             txtNombre.setText("");
             lblError.setText("");
             btnAccionIzquierdo.setText("JUGAR");
             btnAccionDerecho.setVisible(false);
+            panelBotonInferior.setVisible(true); 
+            reproducirSonido(clipMenu, true);
+            return; // Termina el método aquí
+        }
+
+        // Cálculo de Puntos de Error Porcentual
+        double prediccionIA = modelo.hacerPrediccion(juego.getCierreAyer(), juego.getCierreManana());
+        double porcentajeErrorIA = (Math.abs(prediccionIA - cierreHoy) / cierreHoy);
+        
+        int errorJugador = (int) (porcentajeErrorJugador * BASE_ERROR_MULTIPLIER);
+        int errorIA = (int) (porcentajeErrorIA * BASE_ERROR_MULTIPLIER);
+        
+        // Procesar resultado con la lógica de Juego
+        String resumenRonda = juego.calcularResultadoEndless(errorJugador, errorIA, prediccionJugador);
+        
+        actualizarLabelsDatosEndless();
+        lblErrorIAEndless.setText("Error IA: " + errorIA);
+        
+        if (juego.getPuntosJugador() <= 0) {
+            // Este caso se maneja en la lógica de 'calcularResultadoEndless' que actualiza los puntos,
+            pararTodosLosSonidos();
+            reproducirSonido(clipPerder, false);
+            JOptionPane.showMessageDialog(this, 
+                "¡Has perdido todos tus puntos!\nLa partida ha terminado.", 
+                "Fin del Juego", 
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            juego.guardarPartida(accion.simbolo);
+            layoutInterno.show(panelInterno, "inicio");
+            txtNombre.setText("");
+            lblError.setText("");
+            btnAccionIzquierdo.setText("JUGAR");
+            btnAccionDerecho.setVisible(false);
+            panelBotonInferior.setVisible(true); 
+            reproducirSonido(clipMenu, true);
+
         } else {
-            String mensaje = String.format(
-                    "--- RONDA %d FINALIZADA ---\n\n" +
-                    "El Precio de Cierre de HOY fue: %s\n\n" +
-                    "Tu Predicción: %s (Error: %d puntos)\n" +
-                    "Predicción IA: %s (Error: %d puntos)\n\n" +
-                    "%s",
-                    juego.getRondaActual(),
-                    currencyFormat.format(cierreHoy),
-                    currencyFormat.format(prediccionJugador), errorJugador,
-                    currencyFormat.format(prediccionIA), errorIA,
-                    resumenRonda
-            );
+             String mensaje = String.format("--- RONDA %d FINALIZADA ---\n\nEl Precio de Cierre de HOY fue: %s\n\nTu Predicción: %s (Error: %d pts)\nPredicción IA: %s (Error: %d pts)\n\n%s",
+                juego.getRondaActual(), currencyFormat.format(juego.getCierreHoy()), currencyFormat.format(prediccionJugador), errorJugador, currencyFormat.format(prediccionIA), errorIA, resumenRonda);
             JOptionPane.showMessageDialog(this, mensaje, "Fin de Ronda", JOptionPane.INFORMATION_MESSAGE);
-            if (juego.getPuntosJugador() > 1000) {
-                btnAccionIzquierdo.setText("Retirarse");
-            } else {
-                btnAccionIzquierdo.setText("Reiniciar");
-            }
-            igualarTamañoBotonesMin(btnAccionIzquierdo, btnAccionDerecho);
+            btnAccionIzquierdo.setText(juego.getPuntosJugador() > 1000 ? "Retirarse" : "Reiniciar");
             iniciarNuevaRondaEndless();
         }
     }
     
     private void actualizarLabelsDatosEndless() {
-        NumberFormat volumeFormat = NumberFormat.getIntegerInstance(Locale.US);
         lblRondaEndless.setText("Ronda: " + juego.getRondaActual());
         lblPuntosJugadorEndless.setText("Tus Puntos: " + juego.getPuntosJugador());
         lblErrorIAEndless.setText("Error IA: ---");
@@ -876,21 +1072,28 @@ public class PanelJuego extends JPanel {
         lblCierreAyerEndless.setText("Cierre Ayer: " + currencyFormat.format(juego.getCierreAyer()));
         lblCierreMananaEndless.setText("Cierre Mañana: " + currencyFormat.format(juego.getCierreManana()));
         lblOpenHoyEndless.setText("Open Hoy: " + currencyFormat.format(juego.getOpenHoy()));
-        lblVolumenAyerEndless.setText("Volumen Ayer: " + volumeFormat.format(juego.getVolumenAyer()));
-        lblAltoAyerEndless.setText("Alto Ayer: " + currencyFormat.format(juego.getAltoAyer()));
+        lblVolumenAyerEndless.setText("Volumen Ayer: " + NumberFormat.getIntegerInstance(Locale.US).format(juego.getVolumenAyer()));
+        lblAltoAyerEndless.setText("Altoayer: " + currencyFormat.format(juego.getAltoAyer()));
         lblBajoAyerEndless.setText("Bajo Ayer: " + currencyFormat.format(juego.getBajoAyer()));
     }
     
-    // -------------------------------
-    // HELPER PARA IGUALAR TAMAÑO DE BOTONES
-    // -------------------------------
-    private void igualarTamañoBotonesMin(JButton b1, JButton b2) {
-        Dimension size1 = b1.getPreferredSize();
-        Dimension size2 = b2.getPreferredSize();
-        int maxWidth = Math.max(minBotonSize.width, Math.max(size1.width, size2.width));
-        int maxHeight = Math.max(minBotonSize.height, Math.max(size1.height, size2.height));
-        Dimension uniformSize = new Dimension(maxWidth, maxHeight);
-        b1.setPreferredSize(uniformSize);
-        b2.setPreferredSize(uniformSize);
+    private class PanelJuegoIzquierdo extends JPanel {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (fondoIzquierdo != null) {
+                g.drawImage(fondoIzquierdo, 0, 0, this.getWidth(), this.getHeight(), this);
+            }
+        }
+    }
+    
+    private class PanelJuegoDerecho extends JPanel {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (fondoDerecho != null) {
+                g.drawImage(fondoDerecho, 0, 0, this.getWidth(), this.getHeight(), this);
+            }
+        }
     }
 }
