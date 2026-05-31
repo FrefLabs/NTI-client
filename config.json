@@ -1,7 +1,8 @@
 {
     "red_refinamiento": true,
-    "modo_oscuro": true,
-    "moneda": "US Dolar (USD)",
-    "idioma": "Español (ES)",
-    "efectos_sonido": true
+    "volumen": 30,
+    "moneda": "USD",
+    "efectos_sonido": true,
+    "modelo": 29,
+    "estilo_grafica": "lineal"
 }

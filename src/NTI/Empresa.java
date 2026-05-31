@@ -31,9 +31,4 @@ public class Empresa {
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
     }
-
-    public Vector<Empresa> obtenerEmpresasDesdeBD(String simbolo) {
-        Lectura lectura = new Lectura();
-        return lectura.obtenerEmpresasDesdeBD(simbolo);
-    }
 }

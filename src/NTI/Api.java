@@ -4,47 +4,22 @@ import java.util.Vector;
 
 public class Api {
 
-    private String nombre;
+    private String nombreApi;
     private String key;
-    private Lectura lec = new Lectura();
-    private Formato form = new Formato();
-    private Registro reg = new Registro();
+    private Formato form;
+    private Registro reg;
+    private Lectura lec; // (Lectura se usa para obtener la key)
 
-    public Api(String nombre) {
-        this.nombre = nombre;
+    public Api(String nombreApi) {
+        this.nombreApi = nombreApi;
+        this.form = new Formato();
+        this.reg = new Registro();
+        this.lec = new Lectura();
+        // (Llama a setDatos() para cargar la key al crear la Api)
+        setDatos(); 
     }
 
     public void setDatos() {
-        this.key = lec.obtenerKey(nombre);
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    /**
-     * (MODIFICADO)
-     * Ahora acepta un 'simbolo' y lo pasa a formato y registro.
-     */
-    public boolean obtenerDatosN(String simbolo) {
-        // (Pasa el símbolo a Formato)
-        Vector<Tupla> noticias = form.formatDatosN(key, simbolo);
-
-        if (noticias.isEmpty()) {
-            System.out.println("No se obtuvieron noticias.");
-            return false;
-        }
-
-        int limite = Math.min(2, noticias.size());
-        boolean exito = false;
-
-        for (int i = 0; i < limite; i++) {
-            Tupla n = noticias.get(i);
-            // (Pasa la tupla Y el símbolo a Registro)
-            boolean insertOk = reg.cargaDatosN(n, simbolo);
-            exito = exito || insertOk; // si alguna inserción fue exitosa, exito = true
-        }
-
-        return exito;
+        this.key = lec.obtenerKey(this.nombreApi); 
     }
 }
