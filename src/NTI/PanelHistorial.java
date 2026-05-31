@@ -3,22 +3,19 @@ package NTI;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.Vector;
+import NTI.PanelModelos; 
 
-/**
- * (NUEVA CLASE)
- * Panel para la pantalla "Historial", muestra detalles del modelo seleccionado.
- */
 public class PanelHistorial extends JPanel {
 
-    // --- Referencia a NTI y sus componentes ---
     private NTI nti; 
 
-    // --- Formateadores ---
     private final DecimalFormat priceFormat = new DecimalFormat("'$'0.00");
     private final DecimalFormat diffFormat = new DecimalFormat("'$'0.00");
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
@@ -28,6 +25,11 @@ public class PanelHistorial extends JPanel {
     private JPanel panelListaHistorial;
     private JScrollPane scrollPane;
     private JLabel lblFallback;
+    
+    // --- Componentes para el layout ---
+    private CardLayout cardLayoutCentral;
+    private JPanel panelContenedorCentral;
+    private JButton btnVerDetalles;
 
     /**
      * Constructor de PanelHistorial.
@@ -43,22 +45,76 @@ public class PanelHistorial extends JPanel {
     }
 
     private void initUI() {
+        
+        // --- Panel Superior para Título y Botón ---
+        JPanel panelTitulo = new JPanel(new BorderLayout(20, 0));
+        panelTitulo.setOpaque(false);
+        
         lblTituloHistorial = new JLabel("Historial de...");
         lblTituloHistorial.setFont(Fuentes.getBlack(24f));
         lblTituloHistorial.setForeground(nti.letra);
         lblTituloHistorial.setBorder(new EmptyBorder(0, 5, 15, 0));
-        this.add(lblTituloHistorial, BorderLayout.NORTH);
+        panelTitulo.add(lblTituloHistorial, BorderLayout.CENTER);
 
+        // --- Botón Ver Detalles ---
+        btnVerDetalles = new JButton("Ver Detalles");
+        btnVerDetalles.setPreferredSize(new Dimension(190, 50));
+        btnVerDetalles.setBackground(nti.fondoPanel);
+        btnVerDetalles.setForeground(nti.bordeDorado);
+        btnVerDetalles.setFont(Fuentes.getBold(14f));
+        btnVerDetalles.setFocusPainted(false);
+        btnVerDetalles.setBorder(new RoundedBorder(15, nti.bordeDorado, 2));
+        // Añadir cursor de mano
+        btnVerDetalles.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Acción del botón:
+        btnVerDetalles.addActionListener(e -> {
+            int idModelo = nti.modelo.getIDModeloSeleccionado();
+            
+            if (nti.panelModelos != null) {
+                nti.panelModelos.mostrarDetalleDeModelo(idModelo);
+            }
+            
+            nti.panelModelos.mostrarDetalleDeModelo(idModelo);
+            nti.cambiarPanel("modelos");
+            
+            
+        });
+        btnVerDetalles.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
+        
+        JPanel panelBotonContenedor = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        panelBotonContenedor.setOpaque(false);
+        panelBotonContenedor.add(btnVerDetalles);
+        
+        panelTitulo.add(panelBotonContenedor, BorderLayout.EAST);
+        
+        this.add(panelTitulo, BorderLayout.NORTH);
+
+
+        // --- Panel Central con CardLayout ---
+        cardLayoutCentral = new CardLayout();
+        panelContenedorCentral = new JPanel(cardLayoutCentral);
+        panelContenedorCentral.setOpaque(false);
+
+        // --- Panel Fallback ---
+        lblFallback = new JLabel("No hay datos de historial para este modelo.");
+        lblFallback.setFont(Fuentes.getRegular(16f));
+        lblFallback.setForeground(nti.letra.darker());
+        
+        JPanel panelFallbackContenedor = new JPanel(new GridBagLayout());
+        panelFallbackContenedor.setOpaque(false);
+        panelFallbackContenedor.add(lblFallback); // GridBagLayout por defecto centra
+
+        // --- Panel de Lista ---
         panelListaHistorial = new JPanel();
         panelListaHistorial.setLayout(new BoxLayout(panelListaHistorial, BoxLayout.Y_AXIS));
         panelListaHistorial.setBackground(nti.fondo);
         
-        lblFallback = new JLabel("No hay datos de historial para este modelo.");
-        lblFallback.setFont(Fuentes.getRegular(16f));
-        lblFallback.setForeground(nti.letra.darker());
-        lblFallback.setVisible(false);
-        panelListaHistorial.add(lblFallback);
-
         scrollPane = new JScrollPane(panelListaHistorial);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(nti.fondo);
@@ -66,7 +122,12 @@ public class PanelHistorial extends JPanel {
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
-        this.add(scrollPane, BorderLayout.CENTER);
+        // --- Añadir las "cartas" ---
+        panelContenedorCentral.add(scrollPane, "LISTA");
+        panelContenedorCentral.add(panelFallbackContenedor, "FALLBACK");
+        
+        // Añade el contenedor central al CENTRO del panel principal
+        this.add(panelContenedorCentral, BorderLayout.CENTER);
     }
 
     /**
@@ -74,34 +135,50 @@ public class PanelHistorial extends JPanel {
      */
     public void cargarDatos() {
         panelListaHistorial.removeAll();
-        lblFallback.setVisible(false);
         
         new Thread(() -> {
             Map<String, Object> info = nti.modelo.obtenerInfoSeleccionado();
-            Vector<Map<String, Object>> historial = nti.modelo.obtenerHistorialModelo(); // (Usando el SP que creamos)
+            Vector<Map<String, Object>> historial = nti.modelo.obtenerHistorialModelo(); 
+
+            // Lógica de conversión de moneda
+            String monedaSeleccionada = nti.ent.moneda;
+            double tasaDeCambio = 1.0;
+            boolean errorTasaCambio = false;
+
+            if (!monedaSeleccionada.equalsIgnoreCase("USD")) {
+                tasaDeCambio = nti.lectura.obtenerValorMoneda(monedaSeleccionada);
+                if (Double.isNaN(tasaDeCambio)) {
+                    errorTasaCambio = true;
+                    tasaDeCambio = 1.0;
+                }
+            }
+            final double finalTasaDeCambio = tasaDeCambio;
+            final boolean finalErrorTasaCambio = errorTasaCambio;
 
             SwingUtilities.invokeLater(() -> {
+                String simboloMoneda = finalErrorTasaCambio ? "$" : getCurrencySymbol(monedaSeleccionada);
+
                 if (info != null) {
                     String simbolo = (String) info.get("Simbolo");
                     int id = nti.modelo.getIDModeloSeleccionado();
                     lblTituloHistorial.setText(String.format(
-                        "<html><span style='color:%s;'>Historial de %s - </span><span style='color:%s;'>Modelo #%d</span></html>",
-                        nti.letraStr, simbolo, nti.bordedoradoStr, id
+                        "<html>Historial de Modelo #%d <span style='color:%s;'>%s</span></html>",
+                        id, nti.bordedoradoStr, simbolo
                     ));
                 }
 
                 if (historial == null || historial.isEmpty()) {
-                    lblFallback.setVisible(true);
-                    panelListaHistorial.add(lblFallback);
+                    cardLayoutCentral.show(panelContenedorCentral, "FALLBACK");
                 } else {
                     for (Map<String, Object> fila : historial) {
-                        JPanel panelFila = crearPanelFilaHistorial(fila);
+                        JPanel panelFila = crearPanelFilaHistorial(fila, finalTasaDeCambio, simboloMoneda);
                         panelListaHistorial.add(panelFila);
                         panelListaHistorial.add(Box.createVerticalStrut(15));
                     }
+                    panelListaHistorial.add(Box.createVerticalGlue());
+                    cardLayoutCentral.show(panelContenedorCentral, "LISTA");
                 }
                 
-                panelListaHistorial.add(Box.createVerticalGlue());
                 panelListaHistorial.revalidate();
                 panelListaHistorial.repaint();
                 scrollPane.getVerticalScrollBar().setValue(0);
@@ -112,18 +189,28 @@ public class PanelHistorial extends JPanel {
     /**
      * Helper para crear una sola fila del historial
      */
-    private JPanel crearPanelFilaHistorial(Map<String, Object> fila) {
+    private String getCurrencySymbol(String currencyName) {
+        if (currencyName == null) return "$";
+        if (currencyName.contains("EUR")) return "€";
+        if (currencyName.contains("ARS")) return "ARS$";
+        return "$";
+    }
+
+    /**
+     * Helper para crear una sola fila del historial
+     */
+    private JPanel crearPanelFilaHistorial(Map<String, Object> fila, double tasaDeCambio, String simboloMoneda) {
         Date fecha = (Date) fila.get("H_Fecha");
-        double prediccion = (double) fila.get("Prediccion");
-        double abierto = (double) fila.get("ValorAbierto");
-        double cerrado = (double) fila.get("ValorCerrado");
-        double alto = (double) fila.get("ValorAlto");
-        double bajo = (double) fila.get("ValorBajo");
+        double prediccion = (double) fila.get("Prediccion") * tasaDeCambio;
+        double abierto = (double) fila.get("ValorAbierto") * tasaDeCambio;
+        double cerrado = (double) fila.get("ValorCerrado") * tasaDeCambio;
+        double alto = (double) fila.get("ValorAlto") * tasaDeCambio;
+        double bajo = (double) fila.get("ValorBajo") * tasaDeCambio;
         double diferencia = Math.abs(cerrado - prediccion);
         
         Color colorDiferencia = Color.decode("#22B14C");
-        if (diferencia > 0.5) colorDiferencia = Color.ORANGE;
-        if (diferencia > 1.0) colorDiferencia = Color.RED;
+        if (diferencia > 0.5 * tasaDeCambio) colorDiferencia = Color.ORANGE;
+        if (diferencia > 1.0 * tasaDeCambio) colorDiferencia = Color.RED;
 
         JPanel panel = new JPanel(new BorderLayout(20, 0));
         panel.setBackground(nti.fondoPanel);
@@ -133,6 +220,14 @@ public class PanelHistorial extends JPanel {
         ));
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Añadir cursor de mano a la fila
+        panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
 
         JLabel lblFecha = new JLabel(dateFormat.format(fecha));
         lblFecha.setFont(Fuentes.getBlack(22f));
@@ -142,12 +237,15 @@ public class PanelHistorial extends JPanel {
         JPanel panelDatos = new JPanel(new GridLayout(2, 3, 20, 5));
         panelDatos.setOpaque(false);
 
-        panelDatos.add(crearCeldaDato("Valor de apertura", abierto, nti.letra, priceFormat));
-        panelDatos.add(crearCeldaDato("Valor máximo", alto, nti.letra, priceFormat));
-        panelDatos.add(crearCeldaDato("Valor mínimo", bajo, nti.letra, priceFormat));
-        panelDatos.add(crearCeldaDato("Valor de cierre", cerrado, nti.letra, priceFormat));
-        panelDatos.add(crearCeldaDato("Cierre predicho", prediccion, nti.bordeDorado, priceFormat));
-        panelDatos.add(crearCeldaDato("Diferencia", diferencia, colorDiferencia, diffFormat));
+        DecimalFormat customPriceFormat = new DecimalFormat(simboloMoneda + "0.00");
+        DecimalFormat customDiffFormat = new DecimalFormat(simboloMoneda + "0.00");
+
+        panelDatos.add(crearCeldaDato("Valor de apertura", abierto, nti.letra, customPriceFormat));
+        panelDatos.add(crearCeldaDato("Valor máximo", alto, nti.letra, customPriceFormat));
+        panelDatos.add(crearCeldaDato("Valor mínimo", bajo, nti.letra, customPriceFormat));
+        panelDatos.add(crearCeldaDato("Valor de cierre", cerrado, nti.letra, customPriceFormat));
+        panelDatos.add(crearCeldaDato("Cierre predicho", prediccion, nti.bordeDorado, customPriceFormat));
+        panelDatos.add(crearCeldaDato("Diferencia", diferencia, colorDiferencia, customDiffFormat));
 
         panel.add(panelDatos, BorderLayout.CENTER);
         return panel;

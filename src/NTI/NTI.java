@@ -6,16 +6,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
 import juego.PanelJuego;
+import NTI.PanelModelos;
 
-/**
- * (CLASE PRINCIPAL - CORREGIDA)
- * El ActionListener de btnAjustes ahora llama a
- * panelAjustes.cargarConfiguracionActual() CADA VEZ que se presiona.
- */
 public class NTI extends JFrame {
 
-    // --- Colores y Variables (Tus originales) ---
-    public static final String ARCHIVO_DATOS = "datos.txt";
     Color bordeDorado = Color.decode("#D4AF37");
     Color fondo = Color.decode("#030614");
     Color fondoPanel = Color.decode("#060521");
@@ -23,10 +17,9 @@ public class NTI extends JFrame {
     String bordedoradoStr = "rgb(" + bordeDorado.getRed() + "," + bordeDorado.getGreen() + "," + bordeDorado.getBlue() + ")";
     String letraStr = "rgb(" + letra.getRed() + "," + letra.getGreen() + "," + letra.getBlue() + ")";
 
-    // --- Lógica y Datos (Instanciados una vez) ---
     Empresa emp;
     Noticia not;
-    Entorno ent;
+    public Entorno ent = new Entorno();
     Registro registro;
     Accion accion;
     Lectura lectura;
@@ -34,27 +27,52 @@ public class NTI extends JFrame {
     
     public String estiloGraficaActual;
 
-    // --- Paneles de Contenido (Refactorizados) ---
     public PanelInicio panelInicio;
-    
-    private PanelJuego panelJuego;
-    private PanelModelos panelModelos;
-    private PanelAjustes panelAjustes;
-    private PanelHistorial panelHistorial; 
+    public PanelJuego panelJuego;
+    public PanelModelos panelModelos;
+    public PanelAjustes panelAjustes;
+    public PanelHistorial panelHistorial; 
 
-    // --- Componentes del CardLayout ---
-    private CardLayout cardLayout;
-    private JPanel contentPanel;
+    public CardLayout cardLayout;
+    public JPanel contentPanel;
+
+    // Campos para botones del Sidebar
+    private JButton btnInicio, btnModelos, btnHistorial, btnJuego, btnAjustes;
     
-    // --- Formateadores (usados por los paneles) ---
+    // Campos para los iconos (10 en total)
+    private ImageIcon iconoInicio, iconoInicioSel;
+    private ImageIcon iconoModelos, iconoModelosSel;
+    private ImageIcon iconoHistorial, iconoHistorialSel;
+    private ImageIcon iconoJuego, iconoJuegoSel;
+    private ImageIcon iconoAjustes, iconoAjustesSel;
+
     final DecimalFormat percentFormat = new DecimalFormat("0.00'%'");
     final DecimalFormat maeFormat = new DecimalFormat("'$'0.00");
     final DecimalFormat dfPercent = new DecimalFormat("0.00'%'");
-    final DecimalFormat df8 = new DecimalFormat("0.00000000"); // (Para PanelModelos)
-    final DecimalFormat df4 = new DecimalFormat("0.0000"); // (Para PanelModelos)
+    final DecimalFormat df8 = new DecimalFormat("0.00000000");
+    final DecimalFormat df4 = new DecimalFormat("0.0000");
 
     public NTI() {
         setTitle("NeuroFref Trading Intelligence - 1.0");
+        
+        try {
+            // Carga la imagen 'logo.png' que está en el MISMO paquete NTI
+            java.net.URL imgUrl = getClass().getResource("/img/IconoAplicativo.png");
+            
+            if (imgUrl != null) {
+                ImageIcon icon = new ImageIcon(imgUrl);
+                
+                // Establece la imagen como el ícono de la ventana
+                this.setIconImage(icon.getImage()); 
+                
+            } else {
+                // (Mensaje de error si no encuentra la imagen)
+                System.err.println("No se pudo encontrar el logo.png. Asegúrate de que esté en el paquete 'NTI'.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1298, 763);
         setLocationRelativeTo(null);
@@ -62,15 +80,13 @@ public class NTI extends JFrame {
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(fondo);
 
-        // --- 1. Inicializar Lógica (CON NUEVO ORDEN DE CARGA) ---
-        
         ent = new Entorno();
         registro = new Registro();
         lectura = new Lectura();
         
         String[] config = ent.conseguirConfig();
         
-        int idModeloActual = 29; // Default
+        int idModeloActual = 29;
         try {
             idModeloActual = Integer.parseInt(config[3]);
         } catch (NumberFormatException e) {
@@ -79,11 +95,10 @@ public class NTI extends JFrame {
         
         this.estiloGraficaActual = config[4];
         
-        String simboloActual = lectura.obtenerSimboloPorIDModelo(idModeloActual);
-        System.out.println("Iniciando con Modelo ID: " + idModeloActual + " (Símbolo: " + simboloActual + ")");
+        System.out.println("Iniciando con Modelo ID: " + idModeloActual);
 
         accion = new Accion();
-        accion.simbolo = simboloActual; 
+        // accion.simbolo will be properly set later by PanelInicio.cargarDatosIniciales()
         
         modelo = new Modelo(lectura);
         modelo.setIDModeloSeleccionado(idModeloActual); 
@@ -91,48 +106,101 @@ public class NTI extends JFrame {
         emp = new Empresa();
         not = new Noticia();
         
-        // --- 2. Crear Sidebar (Tu código original) ---
+        cargarIconosSidebar();
+        
         JPanel sidebar = crearPanelSidebar();
         add(sidebar, BorderLayout.WEST);
         
-        // --- 3. Crear Panel Contenedor (CardLayout) ---
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
         add(contentPanel, BorderLayout.CENTER);
 
-        // --- 4. Instanciar Paneles Refactorizados ---
         panelInicio = new PanelInicio(this);
         panelModelos = new PanelModelos(this);
-        panelAjustes = new PanelAjustes(this); // (El constructor YA NO carga datos)
+        panelAjustes = new PanelAjustes(this);
         panelHistorial = new PanelHistorial(this);
-        
-        panelJuego = new PanelJuego(registro, accion, lectura);
+        panelJuego = new PanelJuego(this, registro, accion, lectura);
 
-        // --- 5. Añadir Paneles al CardLayout ---
         contentPanel.add(panelInicio, "inicio");
         contentPanel.add(panelModelos, "modelos");
         contentPanel.add(panelAjustes, "ajustes");
         contentPanel.add(panelJuego, "juego");
         contentPanel.add(panelHistorial, "historial");
 
-        // --- 6. Cargar datos iniciales y mostrar ---
         panelInicio.cargarDatosIniciales(); 
         panelModelos.cargarDatosIniciales();
         
+        actualizarBotonesSidebar("inicio");
+        
         setVisible(true);
+    }
+    /**
+     * Carga los 10 iconos del sidebar desde la carpeta /img/
+     */
+    private void cargarIconosSidebar() {
+        iconoInicio = cargarIconoSidebarHelper("boton_inicio.png");
+        iconoInicioSel = cargarIconoSidebarHelper("boton_inicio_sel.png");
+        
+        iconoModelos = cargarIconoSidebarHelper("boton_modelos.png");
+        iconoModelosSel = cargarIconoSidebarHelper("boton_modelos_sel.png");
+        
+        iconoHistorial = cargarIconoSidebarHelper("boton_historial.png");
+        iconoHistorialSel = cargarIconoSidebarHelper("boton_historial_sel.png");
+        
+        iconoJuego = cargarIconoSidebarHelper("boton_juego.png");
+        iconoJuegoSel = cargarIconoSidebarHelper("boton_juego_sel.png");
+        
+        iconoAjustes = cargarIconoSidebarHelper("boton_ajustes.png");
+        iconoAjustesSel = cargarIconoSidebarHelper("boton_ajustes_sel.png");
     }
 
     /**
-     * (MÉTODO CORREGIDO)
-     * El listener de 'btnAjustes' ahora llama a 'cargarConfiguracionActual'.
+     * Helper para cargar una imagen individual desde /img/
      */
+    private ImageIcon cargarIconoSidebarHelper(String nombre) {
+        try {
+            java.net.URL imgUrl = getClass().getResource("/img/" + nombre);
+            if (imgUrl != null) {
+                return new ImageIcon(imgUrl);
+            } else {
+                System.err.println("No se pudo encontrar el ícono: /img/" + nombre);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("Error al cargar ícono /img/" + nombre + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Método público que actualiza todos los iconos del sidebar.
+     */
+    public void actualizarBotonesSidebar(String panelActivo) {
+        btnInicio.setIcon(panelActivo.equals("inicio") ? iconoInicioSel : iconoInicio);
+        btnModelos.setIcon(panelActivo.equals("modelos") ? iconoModelosSel : iconoModelos);
+        btnHistorial.setIcon(panelActivo.equals("historial") ? iconoHistorialSel : iconoHistorial);
+        btnJuego.setIcon(panelActivo.equals("juego") ? iconoJuegoSel : iconoJuego);
+        btnAjustes.setIcon(panelActivo.equals("ajustes") ? iconoAjustesSel : iconoAjustes);
+    }
+
+    public void cambiarPanel(String nombrePanel) {
+        cardLayout.show(contentPanel, nombrePanel);
+        actualizarBotonesSidebar(nombrePanel);
+
+        // Mover la lógica de onPanelOcultado/Mostrado aquí
+        if (nombrePanel.equals("juego")) {
+            panelJuego.onPanelMostrado();
+        } else {
+            panelJuego.onPanelOcultado();
+        }
+    }
+
     private JPanel crearPanelSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setPreferredSize(new Dimension(200, getHeight()));
         sidebar.setLayout(new BorderLayout());
         sidebar.setBackground(new Color(10, 10, 10));
 
-        // Panel Título (Logo)
         JPanel panelSuperior = new JPanel();
         panelSuperior.setPreferredSize(new Dimension(200, 100));
         panelSuperior.setBackground(new Color(10, 10, 10));
@@ -145,105 +213,117 @@ public class NTI extends JFrame {
         panelSuperior.setLayout(new BorderLayout());
         panelSuperior.add(logoLabel, BorderLayout.CENTER);
 
-        // Panel Central (Botones)
         JPanel panelCentral = new JPanel();
         panelCentral.setBackground(new Color(10, 10, 10));
         panelCentral.setLayout(new BoxLayout(panelCentral, BoxLayout.Y_AXIS));
         panelCentral.setBorder(new EmptyBorder(5, 20, 20, 20));
 
-        JButton btnInicio = crearBoton("/img/boton_inicio.png");
-        JButton btnModelos = crearBoton("/img/boton_modelos.png");
-        JButton btnHistorial = crearBoton("/img/boton_historial.png");
-        JButton btnJuego = crearBoton("/img/boton_juego.png");
+        // Instanciar los campos de clase (sin texto)
+        btnInicio = new JButton();
+        estilizarBotonSidebar(btnInicio); // Aplicar estilo de icono
+        btnModelos = new JButton();
+        estilizarBotonSidebar(btnModelos);
+        btnHistorial = new JButton();
+        estilizarBotonSidebar(btnHistorial);
+        btnJuego = new JButton();
+        estilizarBotonSidebar(btnJuego);
 
-        JButton[] botones = {btnInicio, btnModelos, btnHistorial, btnJuego};
-        for (int i = 0; i < botones.length; i++) {
-            panelCentral.add(botones[i]);
-            if (i < botones.length - 1) {
-                panelCentral.add(Box.createRigidArea(new Dimension(0, 20)));
-            }
-        }
+        panelCentral.add(btnInicio);
+        panelCentral.add(Box.createRigidArea(new Dimension(0, 20)));
+        panelCentral.add(btnModelos);
+        panelCentral.add(Box.createRigidArea(new Dimension(0, 20)));
+        panelCentral.add(btnHistorial);
+        panelCentral.add(Box.createRigidArea(new Dimension(0, 20)));
+        panelCentral.add(btnJuego);
 
-        // Panel Inferior (Ajustes)
         JPanel panelInferior = new JPanel();
         panelInferior.setBackground(new Color(10, 10, 10));
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         panelInferior.setBorder(new EmptyBorder(10, 20, 20, 20));
-        JButton btnAjustes = crearBoton("/img/boton_ajustes.png");
+
+        btnAjustes = new JButton();
+        estilizarBotonSidebar(btnAjustes);
+        
         panelInferior.add(btnAjustes);
 
         sidebar.add(panelSuperior, BorderLayout.NORTH);
         sidebar.add(panelCentral, BorderLayout.CENTER);
         sidebar.add(panelInferior, BorderLayout.SOUTH);
 
-        // --- Action Listeners (Tu código original) ---
+        btnInicio.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnInicio.addActionListener(e -> {
-            cardLayout.show(contentPanel, "inicio");
-            panelJuego.onPanelOcultado();
+            cambiarPanel("inicio");
         });
 
+        btnModelos.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnModelos.addActionListener(e -> {
-            cardLayout.show(contentPanel, "modelos");
-            panelModelos.mostrarListaYRecargar();
-            panelJuego.onPanelOcultado();
+            cambiarPanel("modelos");
+
+            if (panelModelos.estaEnLista()) { // Revisa si está en la vista de lista
+                panelModelos.cargarDatosIniciales();
+            } else if (!panelModelos.estaEnDetalle()) { // Revisa si está en la vista de detalle
+                panelModelos.mostrarListaYRecargar();
+            }
         });
-        
+
+        btnHistorial.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnHistorial.addActionListener(e -> {
-            cardLayout.show(contentPanel, "historial");
+            cambiarPanel("historial");
             panelHistorial.cargarDatos(); 
-            panelJuego.onPanelOcultado();
         });
 
+        btnJuego.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
+        });
         btnJuego.addActionListener(e -> {
-            cardLayout.show(contentPanel, "juego");
-            panelJuego.onPanelMostrado();
+            cambiarPanel("juego");
         });
 
-        // --- (INICIO DE LA CORRECCIÓN) ---
-        btnAjustes.addActionListener(e -> {
-            // 1. (LÍNEA NUEVA) Le dice al panel que lea el JSON
-            panelAjustes.cargarConfiguracionActual(); 
-            
-            // 2. Muestra el panel (ahora actualizado)
-            cardLayout.show(contentPanel, "ajustes");
-            
-            // 3. Oculta el panel de juego
-            panelJuego.onPanelOcultado();
+        btnAjustes.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                AudioManager.getInstance().playBotonSound();
+            }
         });
-        // --- (FIN DE LA CORRECCIÓN) ---
+        btnAjustes.addActionListener(e -> {
+            cambiarPanel("ajustes");
+            panelAjustes.cargarConfiguracionActual(); 
+        });
 
         return sidebar;
     }
-
+    
     /**
-     * (TU MÉTODO ORIGINAL) Helper para crear botones de la sidebar.
+     * Método para botones de ICONO
      */
-    private JButton crearBoton(String rutaImagen) {
-        JButton boton = new JButton();
+    private void estilizarBotonSidebar(JButton boton) {
+        // Quitar todo el estilo visual
+        boton.setFocusPainted(false);
+        boton.setBorder(null);
+        boton.setBorderPainted(false);
+        boton.setContentAreaFilled(false);
+        boton.setOpaque(false);
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Mantener el tamaño fijo para que el layout no se rompa
         boton.setPreferredSize(new Dimension(174, 46));
         boton.setMaximumSize(new Dimension(174, 46));
         boton.setMinimumSize(new Dimension(174, 46));
-        boton.setBackground(new Color(20, 20, 20));
-        boton.setFocusPainted(false);
-        boton.setBorder(new TransparentRoundedBorder(15)); // (Usa la clase externa)
-
-        try {
-            ImageIcon icono = new ImageIcon(getClass().getResource(rutaImagen));
-            boton.setIcon(icono);
-        } catch (Exception e) {
-            System.err.println("No se pudo cargar la imagen: " + rutaImagen);
-            boton.setText(rutaImagen.substring(5, rutaImagen.indexOf('.'))); // Fallback
-            boton.setForeground(letra);
-        }
-        
-        boton.setText("");
-        boton.setContentAreaFilled(false);
-        boton.setOpaque(false);
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        return boton;
     }
-
+    
     private ImageIcon escalarImagen(ImageIcon iconoOriginal, int ancho, int alto) {
         Image imagenOriginal = iconoOriginal.getImage();
         Image imagenEscalada = imagenOriginal.getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
