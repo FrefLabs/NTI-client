@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://raw.githubusercontent.com/FrefLabs/NTI-client/master/src/img/IconoAplicativo.png" width="380" alt="N.T.I. Logo">
+<img src="https://raw.githubusercontent.com/FrefLabs/NTI-client/master/src/img/NTI-LOGO-FINAL.svg" width="380" alt="N.T.I. Logo">
 </p>
 
 <h2 align="center">NTI-client</h2>
