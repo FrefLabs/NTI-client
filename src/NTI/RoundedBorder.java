@@ -9,10 +9,6 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import javax.swing.border.Border;
 
-/**
- * (CLASE DE UTILIDAD - ARCHIVO SEPARADO)
- * Dibuja un borde redondeado con color y grosor.
- */
 public class RoundedBorder implements Border {
     private int radius;
     private Color color;
@@ -21,7 +17,7 @@ public class RoundedBorder implements Border {
     public RoundedBorder(int radius, Color color, int thickness) {
         this.radius = radius;
         this.color = color;
-        this.thickness = thickness - 1; // Tu lógica original
+        this.thickness = thickness - 1;
     }
 
     @Override

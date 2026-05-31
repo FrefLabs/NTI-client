@@ -41,7 +41,7 @@ public class Modelo {
             /* ... error ... */ }
 
         // El panel de inicio (panelInicio) llama con LÍMITE 3
-        return lectura.getModelosRecomendados(0, 3);
+        return lectura.getModelosRecomendados(this.IDModeloSeleccionado, 3);
     }
     
     public Vector<Map<String, Object>> obtenerRecomendados() {

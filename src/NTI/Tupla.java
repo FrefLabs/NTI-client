@@ -8,7 +8,7 @@ public class Tupla {
     private String titulo;
     private String fuente;
     private String url;
-    private String fecha; // YYYY-MM-DD
+    private String fecha;
 
     public Tupla(String titulo, String fuente, String url, String fecha) {
         this.titulo = titulo;
@@ -20,7 +20,6 @@ public class Tupla {
     private String formatearFecha(String fechaOriginal) {
         if (fechaOriginal == null || fechaOriginal.isEmpty()) return "0000-00-00";
 
-        // Si viene con hora tipo 2025-10-26T13:45:00Z, tomamos solo la parte de fecha
         if (fechaOriginal.contains("T")) {
             fechaOriginal = fechaOriginal.substring(0, 10);
         }

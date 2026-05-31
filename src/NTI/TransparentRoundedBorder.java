@@ -7,10 +7,6 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import javax.swing.border.Border;
 
-/**
- * (CLASE DE UTILIDAD - ARCHIVO SEPARADO)
- * Dibuja un borde redondeado transparente para los botones de imagen.
- */
 public class TransparentRoundedBorder implements Border {
     private int radius;
 
@@ -20,7 +16,7 @@ public class TransparentRoundedBorder implements Border {
 
     @Override
     public Insets getBorderInsets(Component c) {
-        return new Insets(0, 0, 0, 0); // Sin márgenes internos
+        return new Insets(0, 0, 0, 0);
     }
 
     @Override
@@ -32,8 +28,7 @@ public class TransparentRoundedBorder implements Border {
     public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        // Dibujar un borde redondeado sin color visible
-        g2.setColor(c.getBackground()); // Usar el color de fondo del botón
+        g2.setColor(c.getBackground());
         g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
     }
 }

@@ -5,10 +5,8 @@ import java.io.InputStream;
 
 public class Fuentes {
 
-    // Ruta base de las fuentes
     private static final String BASE_PATH = "/fonts/static/";
 
-    // Fuente principal (Inter) en distintos pesos
     private static Font interRegular;
     private static Font interBold;
     private static Font interBlack;
@@ -26,9 +24,6 @@ public class Fuentes {
         }
     }
 
-    /**
-     * Carga una fuente desde el archivo TTF.
-     */
     private static Font cargarFuente(String archivo) throws Exception {
         InputStream is = Fuentes.class.getResourceAsStream(BASE_PATH + archivo);
         if (is == null) {
@@ -36,8 +31,6 @@ public class Fuentes {
         }
         return Font.createFont(Font.TRUETYPE_FONT, is);
     }
-
-    // Métodos públicos para acceder a las fuentes derivadas con tamaño dinámico
 
     public static Font getRegular(float size) {
         return interRegular.deriveFont(size);
