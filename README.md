@@ -1,5 +1,5 @@
 <p align="center">
-<img src="src/img/NTI-LOGO-FINAL.svg" width="380" alt="N.T.I. Logo">
+<img src="https://raw.githubusercontent.com/FrefLabs/NTI-client/master/src/img/IconoAplicativo.png" width="380" alt="N.T.I. Logo">
 </p>
 
 <h2 align="center">NTI-client</h2>
@@ -15,12 +15,13 @@
 
 ## El sistema
 
-N.T.I. (NeuroFref Trading Intelligence) es una plataforma que entrena redes neuronales para predecir el precio de cierre de acciones del mercado bursátil. El sistema completo tiene cuatro componentes:
+N.T.I. (NeuroFref Trading Intelligence) es una plataforma que entrena redes neuronales para predecir el precio de cierre de acciones del mercado bursátil. El sistema completo tiene cinco componentes:
 
 - **NTI-client** (este repo) - interfaz de escritorio para el usuario
 - **NTI-server** - servidor REST central que coordina todo
 - **NTI-gateway** - gateway Python que ejecuta los scripts de datos financieros
 - **NTI-train** - proceso de entrenamiento distribuido que corre en dispositivos disponibles
+- **NTI-node** - nodos de cómputo que se conectan al gateway vía WebSocket para ejecutar scripts de datos
 
 El cliente se comunica únicamente con NTI-server vía HTTP.
 
